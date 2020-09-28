@@ -1,6 +1,4 @@
 d3.json("./highest-grossing-per-region.json").then((raw) => {
-  console.log(raw);
-
   let dataset = Object.keys(raw).reduce((accumulator, currentVal) => {
     accumulator[+[currentVal]] = raw[currentVal];
     return accumulator;
@@ -21,12 +19,18 @@ d3.json("./highest-grossing-per-region.json").then((raw) => {
     .displayValue(true)
     .on("onchange", (val) => {
       d3.select("#value").text(val);
-      d3.select("#result")
-        .selectAll("div")
-        .append("div")
-        .text((year, i) => {
-          return raw[year];
-        });
+      let yearData = dataset[val];
+      if (yearData) {
+        console.log(val, yearData);
+        d3.select("#result")
+          .selectAll("div")
+          .data(yearData)
+          .enter()
+          .append("div")
+          .text((el, i) => {
+            return i;
+          });
+      }
     });
 
   d3.select("#slider")
