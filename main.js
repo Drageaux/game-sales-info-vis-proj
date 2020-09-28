@@ -1,36 +1,45 @@
 d3.json("./highest-grossing-per-region.json").then((raw) => {
   let dataset = Object.keys(raw).reduce((accumulator, currentVal) => {
-    accumulator[+[currentVal]] = raw[currentVal];
+    let regions = [];
+    Object.keys(raw[currentVal]).forEach((x) => {
+      regions.push({ region: x, data: raw[currentVal][x] });
+    });
+    accumulator.push({ year: +[currentVal], regions });
     return accumulator;
-  }, {});
-
-  let min = Math.min(...Object.keys(dataset));
-  let max = Math.max(...Object.keys(dataset));
+  }, []);
+  let nested = d3
+    .nest()
+    .key((x) => x.year)
+    .entries(dataset);
+  console.log(nested);
 
   // ********************************************************************* //
   // ******************************* SLIDER ****************************** //
   // ********************************************************************* //
   var slider = d3
     .sliderHorizontal()
-    .min(min)
-    .max(max)
+    .min(d3.min(dataset, (y) => y.year))
+    .max(d3.max(dataset, (y) => y.year))
     .step(1)
     .width(300)
     .displayValue(true)
     .on("onchange", (val) => {
       d3.select("#value").text(val);
-      let yearData = dataset[val];
-      if (yearData) {
-        console.log(val, yearData);
-        d3.select("#result")
-          .selectAll("div")
-          .data(yearData)
-          .enter()
-          .append("div")
-          .text((el, i) => {
-            return i;
-          });
-      }
+      d3.select("#result")
+        .selectAll("div")
+        .data(
+          nested
+            .filter((x) => +[x.key] === val)
+            .map((x) => {
+              console.log(x.values[0]);
+              return x;
+            })
+        )
+        .enter()
+        .append("div")
+        .text((el, i) => {
+          return JSON.stringify(el.values);
+        });
     });
 
   d3.select("#slider")
