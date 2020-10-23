@@ -66,14 +66,26 @@ let color = d3
   .interpolate(d3.interpolateHcl);
 
 d3.csv("./circle_pack.csv").then((data) => {
-  console.log(data);
+  let dataByRegion = d3
+    .nest()
+    .key((d) => d["Region"])
+    .key((d) => d["Genre"])
+    .key((d) => d["Platform"])
+    .entries(data);
 
-  const root = pack(data);
-  let focus = root;
+  console.log(dataByRegion);
+  let root = {
+    key: "Regions",
+    values: dataByRegion,
+  };
+  const cPack = pack(root);
+  let focus = cPack;
   let view;
 
+  console.log(cPack);
+
   const svg = d3
-    .create("svg")
+    .select("svg")
     .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
     .style("display", "block")
     .style("margin", "0 -14px")
@@ -84,10 +96,11 @@ d3.csv("./circle_pack.csv").then((data) => {
   const node = svg
     .append("g")
     .selectAll("circle")
-    .data(root.descendants().slice(1))
+    .data(cPack.descendants().slice(1))
     .join("circle")
-    .attr("fill", (d) => (d.children ? color(d.depth) : "white"))
-    .attr("pointer-events", (d) => (!d.children ? "none" : null))
+    .attr("r", (d) => d.r)
+    .attr("fill", (d) => (d["values"] ? color(d.depth) : "white"))
+    .attr("pointer-events", (d) => (!d["Sales (million)"] ? "none" : null))
     .on("mouseover", function () {
       d3.select(this).attr("stroke", "#000");
     })
@@ -106,28 +119,30 @@ d3.csv("./circle_pack.csv").then((data) => {
     .attr("pointer-events", "none")
     .attr("text-anchor", "middle")
     .selectAll("text")
-    .data(root.descendants())
+    .data(cPack.descendants())
     .join("text")
-    .style("fill-opacity", (d) => (d.parent === root ? 1 : 0))
-    .style("display", (d) => (d.parent === root ? "inline" : "none"))
-    .text((d) => d.data.name);
-
-  console.log(root);
+    .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
+    .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
+    .text((d) => d.data["key"]);
 
   // zoomTo([root.x, root.y, root.r * 2], node, label);
 });
 
 // circle packing function
-let pack = (data) =>
-  d3
+let pack = (data) => {
+  return d3
     .pack()
     .size([width - 2, height - 2])
     .padding(3)(
     d3
-      .hierarchy(data)
-      .sum((d) => d.value)
-      .sort((a, b) => b.value - a.value)
+      .hierarchy(data, (d) => {
+        // children accessor
+        return d["values"];
+      })
+      .sum((d) => d["Sales (million)"])
+      .sort((a, b) => b["Sales (million)"] - a["Sales (million)"])
   );
+};
 
 let zoomTo = (v, node, label) => {
   const k = width / v[2];
