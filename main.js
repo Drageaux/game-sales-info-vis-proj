@@ -69,7 +69,7 @@ let currFocus;
 let view;
 
 d3.csv("./circle_pack.csv").then((data) => {
-  let bigGamesOnly = data.filter((e) => e["Sales (million)"] > 0);
+  let bigGamesOnly = data.filter((e) => e["Sales (million)"] > 1);
   console.log(bigGamesOnly.length, data.length);
   let dataByRegion = d3
     .nest()
@@ -96,26 +96,26 @@ d3.csv("./circle_pack.csv").then((data) => {
     .on("click", (event) => {
       // TODO: handle event stopPropagation giving event=null
       // console.log(event);
-      // zoom(event, root, label, svg);
+      zoom(event, root);
     });
 
   const node = svg
-    .append("g")
     .selectAll("circle")
     .data(cPack.descendants().slice(1))
     .join("circle")
     .attr("r", (d) => d.r)
     .attr("fill", (d) => (d["values"] ? color(d.depth) : "white"))
     .attr("pointer-events", (d) => (!d["Sales (million)"] ? "none" : null))
-    .on("mouseover", function () {
-      d3.select(this).attr("stroke", "#000");
+    .on("mouseover", (d, i) => {
+      // d3.select(this).attr("stroke", "#000");
+      console.log(d, i);
     })
     .on("mouseout", function () {
       d3.select(this).attr("stroke", null);
     })
     .on("click", (event, d) => {
       console.log(event);
-      focus !== d && (zoom(event, d, label, svg), event.stopPropagation());
+      currFocus !== d && (zoom(event, d), event.stopPropagation());
     });
 
   const label = svg
@@ -130,7 +130,54 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"]);
 
-  zoomTo([cPack.x, cPack.y, cPack.r * 2], node, label);
+  let zoomTo = (v) => {
+    const k = width / v[2];
+
+    view = v;
+    // console.log(v);
+
+    label.attr("transform", (d) => {
+      return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
+    });
+    node.attr("transform", (d) => {
+      return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
+    });
+    node.attr("r", (d) => d.r * k);
+  };
+
+  let zoom = (event, d) => {
+    const focus0 = currFocus;
+
+    currFocus = d;
+    console.log(svg.transition());
+
+    const transition = svg
+      .transition()
+      .duration(event && event.altKey ? 7500 : 750)
+      .tween("zoom", (d) => {
+        const i = d3.interpolateZoom(view, [
+          currFocus.x,
+          currFocus.y,
+          currFocus.r * 2,
+        ]);
+        return (t) => zoomTo(i(t));
+      });
+
+    label
+      .filter(function (d) {
+        return d.parent === currFocus || this.style.display === "inline";
+      })
+      .transition(transition)
+      .style("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
+      .on("start", function (d) {
+        if (d.parent === currFocus) this.style.display = "inline";
+      })
+      .on("end", function (d) {
+        if (d.parent !== currFocus) this.style.display = "none";
+      });
+  };
+
+  zoomTo([cPack.x, cPack.y, cPack.r * 2]);
 });
 
 // circle packing function
@@ -147,52 +194,4 @@ let pack = (data) => {
       .sum((d) => d["Sales (million)"])
       .sort((a, b) => b["Sales (million)"] - a["Sales (million)"])
   );
-};
-
-let zoomTo = (v, node, label) => {
-  const k = width / v[2];
-
-  view = v;
-  console.log(v);
-
-  label.attr("transform", (d) => {
-    return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
-  });
-  node.attr("transform", (d) => {
-    return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
-  });
-  node.attr("r", (d) => d.r * k);
-};
-
-let zoom = (event, d, label, svg) => {
-  const focus0 = currFocus;
-
-  currFocus = d;
-  console.log(event);
-
-  const transition = svg
-    .transition()
-    .duration(event.altKey ? 7500 : 750)
-    .tween("zoom", (d) => {
-      const i = d3.interpolateZoom(view, [
-        currFocus.x,
-        currFocus.y,
-        currFocus.r * 2,
-      ]);
-      return (t) => zoomTo(i(t));
-    });
-
-  label
-    .filter(function (d) {
-      console.log(d);
-      return d.parent === focus || this.style.display === "inline";
-    })
-    .transition(transition)
-    .style("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
-    .on("start", function (d) {
-      if (d.parent === focus) this.style.display = "inline";
-    })
-    .on("end", function (d) {
-      if (d.parent !== focus) this.style.display = "none";
-    });
 };
