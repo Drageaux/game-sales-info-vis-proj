@@ -78,7 +78,6 @@ d3.csv("./circle_pack.csv").then((data) => {
     .key((d) => d["Platform"])
     .entries(bigGamesOnly);
 
-  console.log(dataByRegion);
   let root = {
     key: "Regions",
     values: dataByRegion,
@@ -96,15 +95,15 @@ d3.csv("./circle_pack.csv").then((data) => {
     .on("click", (event) => {
       // TODO: handle event stopPropagation giving event=null
       // console.log(event);
-      zoom(event, root);
+      zoom(event, cPack);
     });
 
   const node = svg
     .selectAll("circle")
     .data(cPack.descendants().slice(1))
-    .join("circle")
+    .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
-    .attr("fill", (d) => (d["values"] ? color(d.depth) : "white"))
+    .attr("fill", (d) => (d.children ? color(d.depth) : "white"))
     .attr("pointer-events", (d) => (!d["Sales (million)"] ? "none" : null))
     .on("mouseover", (d, i) => {
       // d3.select(this).attr("stroke", "#000");
@@ -134,7 +133,6 @@ d3.csv("./circle_pack.csv").then((data) => {
     const k = width / v[2];
 
     view = v;
-    // console.log(v);
 
     label.attr("transform", (d) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
@@ -147,19 +145,19 @@ d3.csv("./circle_pack.csv").then((data) => {
 
   let zoom = (event, d) => {
     const focus0 = currFocus;
-
     currFocus = d;
-    console.log(svg.transition());
 
     const transition = svg
       .transition()
       .duration(event && event.altKey ? 7500 : 750)
       .tween("zoom", (d) => {
+        // view is the starting point, current focus is the next point
         const i = d3.interpolateZoom(view, [
           currFocus.x,
           currFocus.y,
           currFocus.r * 2,
         ]);
+        // console.log(view, [currFocus.x, currFocus.y, currFocus.r * 2], i(750));
         return (t) => zoomTo(i(t));
       });
 
