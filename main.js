@@ -112,6 +112,7 @@ d3.csv("./circle_pack.csv").then((data) => {
       d3.select(this).attr("stroke", null);
     })
     .on(
+      // if clicked the currently focused node, zoom all the way out(?)
       "click",
       (d, i) => currFocus !== d && (zoom(d), d3.event.stopPropagation())
     );
@@ -143,7 +144,6 @@ d3.csv("./circle_pack.csv").then((data) => {
   };
 
   let zoom = (d) => {
-    const focus0 = currFocus;
     currFocus = d;
 
     const transition = svg
