@@ -94,7 +94,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("cursor", "pointer")
     .on("click", (event) => {
       // TODO: handle event stopPropagation giving event=null
-      // console.log(event);
+      console.log(event);
       zoom(event, cPack);
     });
 
@@ -104,9 +104,9 @@ d3.csv("./circle_pack.csv").then((data) => {
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
     .attr("fill", (d) => (d.children ? color(d.depth) : "white"))
-    .attr("pointer-events", (d) => (!d["Sales (million)"] ? "none" : null))
+    .attr("pointer-events", (d) => (!d.children ? "none" : null))
     .on("mouseover", (d, i) => {
-      // d3.select(this).attr("stroke", "#000");
+      d3.select(this).attr("stroke", "#000");
       console.log(d, i);
     })
     .on("mouseout", function () {
