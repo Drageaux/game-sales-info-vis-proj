@@ -92,30 +92,29 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("margin", "0 -14px")
     .style("background", color(0))
     .style("cursor", "pointer")
-    .on("click", (event) => {
-      // TODO: handle event stopPropagation giving event=null
-      console.log(event);
-      zoom(event, cPack);
-    });
+    .on("click", () => zoom(cPack));
 
   const node = svg
+    .append("g")
     .selectAll("circle")
     .data(cPack.descendants().slice(1))
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
     .attr("fill", (d) => (d.children ? color(d.depth) : "white"))
-    .attr("pointer-events", (d) => (!d.children ? "none" : null))
-    .on("mouseover", (d, i) => {
+    .attr("pointer-events", (d) => (!d.children ? "none" : null));
+
+  node
+    .on("mousedown", function () {})
+    .on("mouseover", function () {
       d3.select(this).attr("stroke", "#000");
-      console.log(d, i);
     })
     .on("mouseout", function () {
       d3.select(this).attr("stroke", null);
     })
-    .on("click", (event, d) => {
-      console.log(event);
-      currFocus !== d && (zoom(event, d), event.stopPropagation());
-    });
+    .on(
+      "click",
+      (d, i) => currFocus !== d && (zoom(d), d3.event.stopPropagation())
+    );
 
   const label = svg
     .append("g")
@@ -143,21 +142,20 @@ d3.csv("./circle_pack.csv").then((data) => {
     node.attr("r", (d) => d.r * k);
   };
 
-  let zoom = (event, d) => {
+  let zoom = (d) => {
     const focus0 = currFocus;
     currFocus = d;
 
     const transition = svg
       .transition()
-      .duration(event && event.altKey ? 7500 : 750)
-      .tween("zoom", (d) => {
+      .duration(750)
+      .tween("zoom", () => {
         // view is the starting point, current focus is the next point
         const i = d3.interpolateZoom(view, [
           currFocus.x,
           currFocus.y,
           currFocus.r * 2,
         ]);
-        // console.log(view, [currFocus.x, currFocus.y, currFocus.r * 2], i(750));
         return (t) => zoomTo(i(t));
       });
 
