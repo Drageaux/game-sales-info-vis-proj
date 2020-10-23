@@ -65,13 +65,18 @@ let color = d3
   .range(["hsl(152,80%,80%)", "hsl(228,30%,40%)"])
   .interpolate(d3.interpolateHcl);
 
+let currFocus;
+let view;
+
 d3.csv("./circle_pack.csv").then((data) => {
+  let bigGamesOnly = data.filter((e) => e["Sales (million)"] > 0);
+  console.log(bigGamesOnly.length, data.length);
   let dataByRegion = d3
     .nest()
     .key((d) => d["Region"])
     .key((d) => d["Genre"])
     .key((d) => d["Platform"])
-    .entries(data);
+    .entries(bigGamesOnly);
 
   console.log(dataByRegion);
   let root = {
@@ -79,10 +84,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     values: dataByRegion,
   };
   const cPack = pack(root);
-  let focus = cPack;
-  let view;
-
-  console.log(cPack);
+  currFocus = cPack;
 
   const svg = d3
     .select("svg")
@@ -90,8 +92,12 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("display", "block")
     .style("margin", "0 -14px")
     .style("background", color(0))
-    .style("cursor", "pointer");
-  // .on("click", (event) => zoom(event, root));
+    .style("cursor", "pointer")
+    .on("click", (event) => {
+      // TODO: handle event stopPropagation giving event=null
+      // console.log(event);
+      // zoom(event, root, label, svg);
+    });
 
   const node = svg
     .append("g")
@@ -106,12 +112,11 @@ d3.csv("./circle_pack.csv").then((data) => {
     })
     .on("mouseout", function () {
       d3.select(this).attr("stroke", null);
+    })
+    .on("click", (event, d) => {
+      console.log(event);
+      focus !== d && (zoom(event, d, label, svg), event.stopPropagation());
     });
-  // .on(
-  //   "click",
-  //   (event, d) =>
-  //     focus !== d && (zoom(event, d, label), event.stopPropagation())
-  // );
 
   const label = svg
     .append("g")
@@ -125,7 +130,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"]);
 
-  // zoomTo([root.x, root.y, root.r * 2], node, label);
+  zoomTo([cPack.x, cPack.y, cPack.r * 2], node, label);
 });
 
 // circle packing function
@@ -151,26 +156,29 @@ let zoomTo = (v, node, label) => {
   console.log(v);
 
   label.attr("transform", (d) => {
-    console.log(d);
     return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
   });
-  node.attr(
-    "transform",
-    (d) => `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`
-  );
+  node.attr("transform", (d) => {
+    return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
+  });
   node.attr("r", (d) => d.r * k);
 };
 
-let zoom = (event, d, label) => {
-  const focus0 = focus;
+let zoom = (event, d, label, svg) => {
+  const focus0 = currFocus;
 
-  focus = d;
+  currFocus = d;
+  console.log(event);
 
   const transition = svg
     .transition()
     .duration(event.altKey ? 7500 : 750)
     .tween("zoom", (d) => {
-      const i = d3.interpolateZoom(view, [focus.x, focus.y, focus.r * 2]);
+      const i = d3.interpolateZoom(view, [
+        currFocus.x,
+        currFocus.y,
+        currFocus.r * 2,
+      ]);
       return (t) => zoomTo(i(t));
     });
 
@@ -180,7 +188,7 @@ let zoom = (event, d, label) => {
       return d.parent === focus || this.style.display === "inline";
     })
     .transition(transition)
-    .style("fill-opacity", (d) => (d.parent === focus ? 1 : 0))
+    .style("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
     .on("start", function (d) {
       if (d.parent === focus) this.style.display = "inline";
     })
