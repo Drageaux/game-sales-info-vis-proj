@@ -57,19 +57,38 @@ d3.json("./highest-grossing-per-region.json").then((raw) => {
   var svg = d3.select("svg");
 });
  */
-let width = 932;
+let width =
+  window.innerWidth > window.innerHeight
+    ? window.innerHeight
+    : window.innerWidth;
 let height = width;
 let color = d3
   .scaleLinear()
   .domain([0, 5])
-  .range(["hsl(152,80%,80%)", "hsl(228,30%,40%)"])
-  .interpolate(d3.interpolateHcl);
+  .range([
+    "hsl(224,56%,16%)",
+    "white",
+    "hsl(186,59%,60%)",
+    "hsl(218,92%,69%)",
+    "hsl(237,100%,77%)",
+  ]);
+let circleColors = [
+  "hsl(224,56%,16%)",
+  "white",
+  "hsl(186,59%,60%)",
+  "hsl(218,92%,69%)",
+  "hsl(237,100%,77%)",
+];
+// .interpolate(d3.interpolateHcl);
+console.log(color(3));
+console.log(color(4));
+console.log(color(5));
 
 let currFocus;
 let view;
 
 d3.csv("./circle_pack.csv").then((data) => {
-  let bigGamesOnly = data.filter((e) => e["Sales (million)"] > 1);
+  let bigGamesOnly = data.filter((e) => e["Sales (million)"] > 5);
   console.log(bigGamesOnly.length, data.length);
   let dataByRegion = d3
     .nest()
@@ -84,12 +103,11 @@ d3.csv("./circle_pack.csv").then((data) => {
   };
   const cPack = pack(root);
   currFocus = cPack;
+  console.log(cPack);
 
   const svg = d3
     .select("svg")
     .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
-    .style("display", "block")
-    .style("margin", "0 -14px")
     .style("background", color(0))
     .style("cursor", "pointer")
     .on("click", () => zoom(cPack));
@@ -100,16 +118,18 @@ d3.csv("./circle_pack.csv").then((data) => {
     .data(cPack.descendants().slice(1))
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
-    .attr("fill", (d) => (d.children ? color(d.depth) : "white"))
+    .attr("fill-opacity", "0.5")
+    .attr("stroke", (d) => (d.children ? circleColors[d.depth] : "white"))
+    .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null));
 
   node
     .on("mousedown", function () {})
     .on("mouseover", function () {
-      d3.select(this).attr("stroke", "#000");
+      // d3.select(this).attr("stroke", "#000");
     })
     .on("mouseout", function () {
-      d3.select(this).attr("stroke", null);
+      // d3.select(this).attr("stroke", null);
     })
     .on(
       // if clicked the currently focused node, zoom all the way out(?)
@@ -125,7 +145,10 @@ d3.csv("./circle_pack.csv").then((data) => {
     .selectAll("text")
     .data(cPack.descendants())
     .join("text")
-    .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
+    .style("fill", (d) => circleColors[d.depth])
+    .style("fill-opacity", (d) =>
+      d.parent === cPack ? circleColors[d.depth] : 0
+    )
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"]);
 
