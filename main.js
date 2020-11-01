@@ -120,9 +120,8 @@ d3.csv("./circle_pack.csv").then((data) => {
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
     .attr("fill-opacity", "0")
-    .attr("stroke", (d) =>
-      d.parent === cPack ? circleColors[d.depth] : "none"
-    )
+    .attr("stroke", (d) => circleColors[d.depth])
+    .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0))
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null));
 
@@ -137,7 +136,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .on(
       // if clicked the currently focused node, zoom all the way out(?)
       "click",
-      (d, i) => currFocus !== d && (zoom(d), d3.event.stopPropagation())
+      (d, i) => currFocus.depth !== d && (zoom(d), d3.event.stopPropagation())
     );
 
   const label = svg
@@ -154,7 +153,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     )
     .style("font-size", (d) => (d.r / 2 > 64 ? 64 : d.r / 2))
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
-    .text((d) => d.data["key"]);
+    .text((d) => d.data["key"] || d.data["Game"]);
 
   let zoomTo = (v) => {
     const k = width / v[2];
@@ -185,6 +184,24 @@ d3.csv("./circle_pack.csv").then((data) => {
         ]);
         return (t) => zoomTo(i(t));
       });
+
+    node
+      .transition(transition)
+      .attr("stroke-opacity", (d) =>
+        d === currFocus || d.parent === currFocus ? 1 : 0
+      );
+    // .on("start", function (d) {
+    //   if (d.parent === currFocus) this.attribute.fill = "inline";
+    // })
+    // .on("end", function (d) {
+    //   if (d.parent !== currFocus) this.style.display = "none";
+    // });
+    // .on("start", (d) {
+    //   if (d.parent === currFocus) this.style.display = "inline";
+    // })
+    // .on("end", function (d) {
+    //   if (d.parent !== currFocus) this.style.display = "none";
+    // });;
 
     label
       .filter(function (d) {
