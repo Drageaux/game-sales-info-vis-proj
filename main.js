@@ -128,7 +128,7 @@ d3.csv("./circle_pack.csv").then((data) => {
   node
     .on("mousedown", function () {})
     .on("mouseover", function () {
-      // d3.select(this).attr("stroke", "#000");
+      d3.select(this).append("filter").style("filter", "url(#myGlow)");
     })
     .on("mouseout", function () {
       // d3.select(this).attr("stroke", null);
@@ -145,7 +145,7 @@ d3.csv("./circle_pack.csv").then((data) => {
 
   const label = svg
     .append("g")
-    .style("font", "10px sans-serif")
+    .style("font", "14px sans-serif")
     .attr("pointer-events", "none")
     .attr("text-anchor", "middle")
     .selectAll("text")
@@ -155,11 +155,11 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("fill-opacity", (d) =>
       d.parent === cPack ? circleColors[d.depth] : 0
     )
-    .style("font-size", (d) =>
-      d.r / 2 < 64 ? (d.r / 2 < 24 ? 24 : d.r / 2) : 64
-    )
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
+    .style("user-select", "none")
     .text((d) => d.data["key"] || d.data["Game"]);
+
+  label.on("mousedown", () => false);
 
   let zoomTo = (v) => {
     const k = width / v[2];
