@@ -151,7 +151,9 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("fill-opacity", (d) =>
       d.parent === cPack ? circleColors[d.depth] : 0
     )
-    .style("font-size", (d) => (d.r / 2 > 64 ? 64 : d.r / 2))
+    .style("font-size", (d) =>
+      d.r / 2 < 64 ? (d.r / 2 < 24 ? 24 : d.r / 2) : 64
+    )
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"] || d.data["Game"]);
 
@@ -189,19 +191,15 @@ d3.csv("./circle_pack.csv").then((data) => {
       .transition(transition)
       .attr("stroke-opacity", (d) =>
         d === currFocus || d.parent === currFocus ? 1 : 0
-      );
-    // .on("start", function (d) {
-    //   if (d.parent === currFocus) this.attribute.fill = "inline";
-    // })
-    // .on("end", function (d) {
-    //   if (d.parent !== currFocus) this.style.display = "none";
-    // });
-    // .on("start", (d) {
-    //   if (d.parent === currFocus) this.style.display = "inline";
-    // })
-    // .on("end", function (d) {
-    //   if (d.parent !== currFocus) this.style.display = "none";
-    // });;
+      )
+      .on("start", function (d) {
+        if (d === currFocus || d.parent === currFocus)
+          this.style.display = "inline";
+      })
+      .on("end", function (d) {
+        if (d !== currFocus && d.parent !== currFocus)
+          this.style.display = "none";
+      });
 
     label
       .filter(function (d) {
