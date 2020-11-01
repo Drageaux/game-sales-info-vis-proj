@@ -121,6 +121,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .attr("r", (d) => d.r)
     .attr("fill-opacity", "0")
     .attr("stroke", (d) => circleColors[d.depth])
+    .attr("stroke-width", "1")
     .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0))
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null));
@@ -128,24 +129,33 @@ d3.csv("./circle_pack.csv").then((data) => {
   node
     .on("mousedown", function () {})
     .on("mouseover", function () {
-      d3.select(this).append("filter").style("filter", "url(#myGlow)");
+      d3.select(this).transition().duration(125).attr("stroke-width", "3px");
     })
     .on("mouseout", function () {
-      // d3.select(this).attr("stroke", null);
+      d3.select(this).transition().duration(125).attr("stroke-width", "1px");
     })
     .on(
       // if clicked the currently focused node, zoom all the way out(?)
       "click",
       (d, i) => {
+        // if (currFocus === d) zoom(d.parent), d3.event.stopPropagation();
+        // else if (Math.abs(currFocus.depth - d.depth) <= 1) {
+        //   zoom(d), d3.event.stopPropagation();
+        //   console.log(d);
+        // } else {
+        //   console.log("test");
+        //   d3.event.preventDefault();
+        // }
         if (currFocus === d) zoom(d.parent), d3.event.stopPropagation();
-        else if (Math.abs(currFocus.depth - d.depth) <= 1)
+        else {
           zoom(d), d3.event.stopPropagation();
+        }
       }
     );
 
   const label = svg
     .append("g")
-    .style("font", "14px sans-serif")
+    .style("font", "24px sans-serif")
     .attr("pointer-events", "none")
     .attr("text-anchor", "middle")
     .selectAll("text")
@@ -156,7 +166,6 @@ d3.csv("./circle_pack.csv").then((data) => {
       d.parent === cPack ? circleColors[d.depth] : 0
     )
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
-    .style("user-select", "none")
     .text((d) => d.data["key"] || d.data["Game"]);
 
   label.on("mousedown", () => false);
