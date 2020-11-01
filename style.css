@@ -1,4 +1,4 @@
 circle:hover {
-  stroke-width: 3px;
+  stroke-width: 4px;
   transition: stroke-width 125ms ease-in;
 }
