@@ -79,6 +79,7 @@ let circleColors = [
   "hsl(218,92%,69%)",
   "hsl(237,100%,77%)",
 ];
+let circleFontSizes = [64, 24, 13];
 // .interpolate(d3.interpolateHcl);
 console.log(color(3));
 console.log(color(4));
@@ -118,8 +119,10 @@ d3.csv("./circle_pack.csv").then((data) => {
     .data(cPack.descendants().slice(1))
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
-    .attr("fill-opacity", "0.5")
-    .attr("stroke", (d) => (d.children ? circleColors[d.depth] : "white"))
+    .attr("fill-opacity", "0")
+    .attr("stroke", (d) =>
+      d.parent === cPack ? circleColors[d.depth] : "none"
+    )
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null));
 
@@ -149,6 +152,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("fill-opacity", (d) =>
       d.parent === cPack ? circleColors[d.depth] : 0
     )
+    .style("font-size", (d) => (d.r / 2 > 64 ? 64 : d.r / 2))
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"]);
 
