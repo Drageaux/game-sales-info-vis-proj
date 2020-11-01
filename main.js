@@ -136,7 +136,11 @@ d3.csv("./circle_pack.csv").then((data) => {
     .on(
       // if clicked the currently focused node, zoom all the way out(?)
       "click",
-      (d, i) => currFocus.depth !== d && (zoom(d), d3.event.stopPropagation())
+      (d, i) => {
+        if (currFocus === d) zoom(d.parent), d3.event.stopPropagation();
+        else if (Math.abs(currFocus.depth - d.depth) <= 1)
+          zoom(d), d3.event.stopPropagation();
+      }
     );
 
   const label = svg
