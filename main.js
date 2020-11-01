@@ -87,7 +87,6 @@ console.log(color(5));
 
 let currFocus;
 let view;
-let zooming = false;
 
 d3.csv("./circle_pack.csv").then((data) => {
   let bigGamesOnly = data.filter((e) => e["Sales (million)"] > 5);
@@ -126,30 +125,18 @@ d3.csv("./circle_pack.csv").then((data) => {
     .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0))
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null)) // no children, no click
-    .style("display", (d) => (d.parent === cPack ? "inline" : "none"));
+    .style("display", (d) => (d.parent === cPack ? "inline" : "none")); // prevent mouseover and mousedown on invisible circles
 
   node
     .on("mousedown", function () {})
-    .on("mouseover", function (d) {
-      if (!zooming)
-        d3.select(this).transition().duration(125).attr("stroke-width", "3px");
-    })
-    .on("mouseout", function (d) {
-      if (!zooming)
-        d3.select(this).transition().duration(125).attr("stroke-width", "1px");
-    })
     .on(
       // if clicked the currently focused node, zoom all the way out(?)
       "click",
       (d, i) => {
         if (currFocus === d) {
           zoom(d.parent), d3.event.stopPropagation();
-        } else if (Math.abs(currFocus.depth - d.depth) <= 1) {
-          zoom(d), d3.event.stopPropagation();
-          console.log(d);
         } else {
-          console.log("test");
-          d3.event.preventDefault();
+          zoom(d), d3.event.stopPropagation();
         }
       }
     );
@@ -199,12 +186,6 @@ d3.csv("./circle_pack.csv").then((data) => {
           currFocus.r * 2,
         ]);
         return (t) => zoomTo(i(t));
-      })
-      .on("start", () => {
-        zooming = true;
-      })
-      .on("end", () => {
-        zooming = false;
       });
 
     node
