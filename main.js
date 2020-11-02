@@ -111,14 +111,16 @@ let shuffleArray = () => {
 };
 
 let updateChart = () => {
-  let bigGamesOnly = games.filter((e) => e["Sales (million)"] > 5);
-  // console.log(bigGamesOnly.length, games.length);
+  let filteredGames = games.filter(
+    (e) => e["Sales (million)"] > 0.0 && +e["Year"] == 2001
+  );
+  console.log(filteredGames);
   let dataByRegion = d3
     .nest()
     .key((d) => d[layers[0]])
     .key((d) => d[layers[1]])
     .key((d) => d[layers[2]])
-    .entries(bigGamesOnly);
+    .entries(filteredGames);
 
   let root = {
     key: "Regions",
