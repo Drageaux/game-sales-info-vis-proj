@@ -81,21 +81,34 @@ let circleColors = [
 ];
 let circleFontSizes = [64, 24, 13];
 // .interpolate(d3.interpolateHcl);
-console.log(color(3));
-console.log(color(4));
-console.log(color(5));
 
+let games;
 let currFocus;
 let view;
+let zoomDuration = 750;
 
 d3.csv("./circle_pack.csv").then((data) => {
-  let bigGamesOnly = data.filter((e) => e["Sales (million)"] > 5);
-  console.log(bigGamesOnly.length, data.length);
+  games = data;
+  updateChart();
+});
+
+let layers = ["Region", "Genre", "Platform"];
+let shuffleArray = () => {
+  for (let i = layers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [layers[i], layers[j]] = [layers[j], layers[i]];
+  }
+  updateChart();
+};
+
+let updateChart = () => {
+  let bigGamesOnly = games.filter((e) => e["Sales (million)"] > 5);
+  console.log(bigGamesOnly.length, games.length);
   let dataByRegion = d3
     .nest()
-    .key((d) => d["Region"])
-    .key((d) => d["Genre"])
-    .key((d) => d["Platform"])
+    .key((d) => d[layers[0]])
+    .key((d) => d[layers[1]])
+    .key((d) => d[layers[2]])
     .entries(bigGamesOnly);
 
   let root = {
@@ -113,19 +126,33 @@ d3.csv("./circle_pack.csv").then((data) => {
     .style("cursor", "pointer")
     .on("click", () => zoom(cPack));
 
+  console.log("cPack.descendants().slice(1)", cPack.descendants().slice(1));
+  console.log("cPack.descendants()", cPack.descendants());
   const node = svg
     .append("g")
     .selectAll("circle")
     .data(cPack.descendants().slice(1))
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
-    .attr("fill-opacity", "0")
+    .attr("fill", circleColors[0])
+    .attr("fill-opacity", "1")
     .attr("stroke", (d) => circleColors[d.depth])
     .attr("stroke-width", "1px")
     .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0))
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null)) // no children, no click
     .style("display", (d) => (d.parent === cPack ? "inline" : "none")); // prevent mouseover and mousedown on invisible circles
+
+  node
+    .exit()
+    .transition()
+    .duration(750)
+    .attr("r", function (d) {
+      return 0;
+    })
+    .remove();
+  console.log("node", node);
+  console.log("node exit", node.exit());
 
   node
     .on("mousedown", function () {})
@@ -147,7 +174,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .attr("pointer-events", "none")
     .attr("text-anchor", "middle")
     .selectAll("text")
-    .data(cPack.descendants())
+    .data(cPack.descendants(), (d) => d.data["key"] || d.data["Game"])
     .join("text")
     .style("fill", (d) => circleColors[d.depth])
     .style("fill-opacity", (d) =>
@@ -177,7 +204,7 @@ d3.csv("./circle_pack.csv").then((data) => {
 
     const transition = svg
       .transition()
-      .duration(750)
+      .duration(zoomDuration)
       .tween("zoom", () => {
         // view is the starting point, current focus is the next point
         const i = d3.interpolateZoom(view, [
@@ -217,7 +244,7 @@ d3.csv("./circle_pack.csv").then((data) => {
   };
 
   zoomTo([cPack.x, cPack.y, cPack.r * 2]);
-});
+};
 
 // circle packing function
 let pack = (data) => {
