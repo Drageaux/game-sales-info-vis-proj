@@ -87,6 +87,15 @@ let currFocus;
 let view;
 let zoomDuration = 750;
 
+const svg = d3
+  .select("svg")
+  .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
+  .style("background", color(0))
+  .style("cursor", "pointer");
+
+const nodeGroup = svg.append("g");
+const labelGroup = svg.append("g");
+
 d3.csv("./circle_pack.csv").then((data) => {
   games = data;
   updateChart();
@@ -103,7 +112,7 @@ let shuffleArray = () => {
 
 let updateChart = () => {
   let bigGamesOnly = games.filter((e) => e["Sales (million)"] > 5);
-  console.log(bigGamesOnly.length, games.length);
+  // console.log(bigGamesOnly.length, games.length);
   let dataByRegion = d3
     .nest()
     .key((d) => d[layers[0]])
@@ -117,21 +126,14 @@ let updateChart = () => {
   };
   const cPack = pack(root);
   currFocus = cPack;
-  console.log(cPack);
 
-  const svg = d3
-    .select("svg")
-    .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
-    .style("background", color(0))
-    .style("cursor", "pointer")
-    .on("click", () => zoom(cPack));
+  // console.log(root);
 
-  console.log("cPack.descendants().slice(1)", cPack.descendants().slice(1));
-  console.log("cPack.descendants()", cPack.descendants());
-  const node = svg
-    .append("g")
+  svg.on("click", () => zoom(cPack));
+
+  const node = nodeGroup
     .selectAll("circle")
-    .data(cPack.descendants().slice(1))
+    .data(cPack.descendants().slice(1)) // skipping circle for top-most level
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
     .attr("fill", circleColors[0])
@@ -143,16 +145,17 @@ let updateChart = () => {
     .attr("pointer-events", (d) => (!d.children ? "none" : null)) // no children, no click
     .style("display", (d) => (d.parent === cPack ? "inline" : "none")); // prevent mouseover and mousedown on invisible circles
 
-  node
-    .exit()
-    .transition()
-    .duration(750)
-    .attr("r", function (d) {
-      return 0;
-    })
-    .remove();
-  console.log("node", node);
-  console.log("node exit", node.exit());
+  // node
+  //   .selectAll("circle")
+  //   .exit()
+  //   .transition()
+  //   .duration(750)
+  //   .attr("r", function (d) {
+  //     return 0;
+  //   })
+  //   .remove();
+  // console.log("node", node);
+  // console.log("node exit", node.select("circle").exit());
 
   node
     .on("mousedown", function () {})
@@ -168,18 +171,15 @@ let updateChart = () => {
       }
     );
 
-  const label = svg
-    .append("g")
+  const label = labelGroup
     .style("font", "24px sans-serif")
     .attr("pointer-events", "none")
     .attr("text-anchor", "middle")
     .selectAll("text")
-    .data(cPack.descendants(), (d) => d.data["key"] || d.data["Game"])
+    .data(cPack.descendants())
     .join("text")
     .style("fill", (d) => circleColors[d.depth])
-    .style("fill-opacity", (d) =>
-      d.parent === cPack ? circleColors[d.depth] : 0
-    )
+    .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"] || d.data["Game"]);
 
