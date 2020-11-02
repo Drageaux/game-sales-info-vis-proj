@@ -101,7 +101,7 @@ d3.csv("./circle_pack.csv").then((data) => {
   updateChart();
 });
 
-let layers = ["Region", "Genre", "Platform"];
+let layers = [REGION, GENRE, PLATFORM];
 let shuffleArray = () => {
   for (let i = layers.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -111,9 +111,7 @@ let shuffleArray = () => {
 };
 
 let updateChart = () => {
-  let filteredGames = games.filter(
-    (e) => e["Sales (million)"] > 0.0 && +e["Year"] == 2001
-  );
+  let filteredGames = games.filter((e) => e[SALES] > 0.0 && +e[YEAR] == 2001);
   console.log(filteredGames);
   let dataByRegion = d3
     .nest()
@@ -142,7 +140,7 @@ let updateChart = () => {
     .attr("fill-opacity", "1")
     .attr("stroke", (d) => circleColors[d.depth])
     .attr("stroke-width", "1px")
-    .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0))
+    .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null)) // no children, no click
     .style("display", (d) => (d.parent === cPack ? "inline" : "none")); // prevent mouseover and mousedown on invisible circles
@@ -181,7 +179,7 @@ let updateChart = () => {
     .data(cPack.descendants())
     .join("text")
     .style("fill", (d) => circleColors[d.depth])
-    .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
+    .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"] || d.data["Game"]);
 
@@ -259,7 +257,7 @@ let pack = (data) => {
         // children accessor
         return d["values"];
       })
-      .sum((d) => d["Sales (million)"])
-      .sort((a, b) => b["Sales (million)"] - a["Sales (million)"])
+      .sum((d) => d[SALES])
+      .sort((a, b) => b[SALES] - a[SALES])
   );
 };
