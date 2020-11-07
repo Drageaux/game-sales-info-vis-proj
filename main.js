@@ -138,9 +138,9 @@ let updateChart = () => {
     .attr("r", (d) => d.r)
     .attr("fill", (d) => circleColors[d.depth])
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
-    // .attr("stroke", (d) => circleColors[d.depth])
-    // .attr("stroke-width", "1px")
-    .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
+    .attr("stroke", (d) => circleColors[d.depth])
+    .attr("stroke-width", "1px")
+    .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0)) // TODO: add ranking and only display high ranked games
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null)) // no children, no click
     .style("display", (d) => (d.parent === cPack ? "inline" : "none")); // prevent mouseover and mousedown on invisible circles
@@ -191,7 +191,7 @@ let updateChart = () => {
     );
 
   const label = labelGroup
-    .style("font", "700 24px 'Open Sans', sans-serif")
+    .style("font", "700 18px 'Open Sans', sans-serif")
     .attr("pointer-events", "none")
     .attr("text-anchor", "middle")
     .selectAll("text")
@@ -235,7 +235,8 @@ let updateChart = () => {
       });
 
     node
-      .transition(750)
+      .transition(zoomDuration)
+      .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
       .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
       .on("start", function (d) {
         if (d === currFocus || d.parent === currFocus)
@@ -250,7 +251,7 @@ let updateChart = () => {
       .filter(function (d) {
         return d.parent === currFocus || this.style.display === "inline";
       })
-      .transition(750)
+      .transition(zoomDuration)
       .style("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
       .on("start", function (d) {
         // if (d.parent === currFocus) this.style.display = "inline";
