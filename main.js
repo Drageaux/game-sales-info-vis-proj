@@ -191,14 +191,14 @@ let updateChart = () => {
     );
 
   const label = labelGroup
-    .style("font", "24px sans-serif")
+    .style("font", "700 24px 'Open Sans', sans-serif")
     .attr("pointer-events", "none")
     .attr("text-anchor", "middle")
     .selectAll("text")
     .data(cPack.descendants())
     .join("text")
     .style("fill", (d) => circleColors[d.depth])
-    .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
+    // .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"] || d.data["Game"]);
 
@@ -235,7 +235,7 @@ let updateChart = () => {
       });
 
     node
-      .transition(0)
+      .transition(750)
       .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
       .on("start", function (d) {
         if (d === currFocus || d.parent === currFocus)
@@ -250,13 +250,15 @@ let updateChart = () => {
       .filter(function (d) {
         return d.parent === currFocus || this.style.display === "inline";
       })
-      .transition(250)
+      .transition(750)
       .style("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
       .on("start", function (d) {
-        if (d.parent === currFocus) this.style.display = "inline";
+        // if (d.parent === currFocus) this.style.display = "inline";
+        if (d.parent !== currFocus) this.style.display = "none";
       })
       .on("end", function (d) {
-        if (d.parent !== currFocus) this.style.display = "none";
+        if (d.parent === currFocus) this.style.display = "inline";
+        // if (d.parent !== currFocus) this.style.display = "none";
       });
   };
 
