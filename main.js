@@ -112,7 +112,6 @@ let shuffleArray = () => {
 
 let updateChart = () => {
   let filteredGames = games.filter((e) => e[SALES] > 0.0 && +e[YEAR] == 2001);
-  console.log(filteredGames);
   let dataByRegion = d3
     .nest()
     .key((d) => d[layers[0]])
@@ -124,21 +123,18 @@ let updateChart = () => {
     key: "Regions",
     values: dataByRegion,
   };
-  const cPack = pack(root);
+  let cPack = pack(root);
   currFocus = cPack;
-
-  // console.log(root);
 
   svg.on("click", () => zoom(cPack));
 
-  const node = svg
+  const nodeUpdate = svg
     .selectAll("g")
-    .data(cPack.descendants().slice(1))
-    .join("g")
-    .style("display", (d) => (d.parent === cPack ? "inline" : "none")) // prevent mouseover and mousedown on invisible circles // skipping circle for top-most level
+    .data(cPack.descendants().slice(1), (d) => d.data["key"] | d.data[GAME])
     .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
+  const nodeEnter = nodeUpdate.enter().append("g");
 
-  const circle = node
+  const circle = nodeEnter
     .append("circle")
     .attr("r", (d) => d.r)
     .attr("fill", (d) => circleColors[d.depth])
@@ -148,7 +144,7 @@ let updateChart = () => {
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0)) // TODO: add ranking and only display high ranked games
     .attr("depth", (d) => d.depth);
 
-  const nucleus = node
+  const nucleus = nodeEnter
     .append("circle")
     .attr("class", "nucleus")
     .attr("r", 15)
@@ -157,21 +153,32 @@ let updateChart = () => {
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", "none");
 
-  // node
-  //   .selectAll("circle")
+  // const nodeExit = svg
+  //   .selectAll("g")
+  //   .data(cPack.descendants(), (d) => d.data["key"])
   //   .exit()
-  //   .transition()
-  //   .duration(750)
-  //   .attr("r", function (d) {
-  //     return 0;
-  //   })
+  //   .transition(250)
   //   .remove();
-  // console.log("node", node);
-  // console.log("node exit", node.select("circle").exit());
+  // nodeExit
+  //   .select("circle")
+  //   .attr("r", 0)
+  //   .attr("display", (d) => (d.parent === cPack ? "inline" : "none"));
+  // nodeExit.select("text").attr;
 
-  node
+  console.log("node", nodeEnter);
+
+  const label = nodeEnter
+    .append("text")
+    .attr("dx", 22)
+    .attr("fill", (d) => circleColors[d.depth])
+    .text((d) => d.data["key"] || d.data[GAME]);
+  label.on("mousedown", () => false);
+
+  const node = nodeUpdate
+    .merge(nodeEnter)
     .on("mouseover", function (d) {
       const filtered = node.filter((e) => e !== d && e.parent === d.parent);
+      console.log(filtered);
 
       filtered.select("circle").transition(250).attr("fill-opacity", 0.3);
       filtered
@@ -195,27 +202,67 @@ let updateChart = () => {
       }
     });
 
-  const label = node
-    .append("text")
-    .attr("dx", 22)
-    .attr("fill", (d) => circleColors[d.depth])
-    .text((d) => d.data["key"] || d.data["Game"]);
+  // ********************************************************************* //
+  // ***************************** FUNCTIONS ***************************** //
+  // ********************************************************************* //
+  let update = () => {
+    // update
+    const node = nodeUpdate
+      .merge(nodeEnter)
+      // .filter("")
+      .transition(zoomDuration)
+      .on("start", function (d) {
+        if (d === currFocus || d.parent === currFocus)
+          this.style.display = "inline";
+        else this.style.display = "none";
+      })
+      .on("end", function (d) {
+        if (d !== currFocus && d.parent !== currFocus)
+          this.style.display = "none";
+        else this.style.display = "inline";
+      });
 
-  label.on("mousedown", () => false);
+    node
+      .select("circle")
+      .transition(zoomDuration)
+      .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
+      .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
+      // make the outer circle display properly
+      .on("start", function (d) {
+        if (d === currFocus || d.parent === currFocus)
+          this.style.display = "inline";
+      })
+      .on("end", function (d) {
+        if (d !== currFocus && d.parent !== currFocus)
+          this.style.display = "none";
+      });
+
+    node
+      .select("circle")
+      .transition(zoomDuration)
+      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+
+    node
+      .select("text")
+      .transition(zoomDuration)
+      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+  };
 
   let zoomTo = (v) => {
     const k = width / v[2];
 
     view = v;
 
-    node
+    const node = nodeEnter
+      .merge(nodeUpdate)
       .filter(function (d) {
         return d.parent === currFocus || this.style.display === "inline";
       })
       .attr("transform", (d) => {
         return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
       });
-    circle
+    node
+      .select("circle")
       .filter(function (d) {
         return d.parent === currFocus || this.style.display === "inline";
       })
@@ -240,41 +287,7 @@ let updateChart = () => {
         return (t) => zoomTo(i(t));
       });
 
-    // swap
-    node
-      .transition(zoomDuration)
-      .on("start", function (d) {
-        if (d === currFocus || d.parent === currFocus)
-          this.style.display = "inline";
-        else this.style.display = "none";
-      })
-      .on("end", function (d) {
-        if (d !== currFocus && d.parent !== currFocus)
-          this.style.display = "none";
-        else this.style.display = "inline";
-      });
-
-    circle
-      .transition(zoomDuration)
-      .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
-      .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
-      // make the outer circle display properly
-      .on("start", function (d) {
-        if (d === currFocus || d.parent === currFocus)
-          this.style.display = "inline";
-      })
-      .on("end", function (d) {
-        if (d !== currFocus && d.parent !== currFocus)
-          this.style.display = "none";
-      });
-
-    nucleus
-      .transition(zoomDuration)
-      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
-
-    label
-      .transition(zoomDuration)
-      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+    update();
   };
 
   zoomTo([cPack.x, cPack.y, cPack.r * 2]);
@@ -288,7 +301,7 @@ let pack = (data) => {
     .padding(3)(
     d3
       .hierarchy(data, (d) => {
-        // children accessor
+        // change children accessor
         return d["values"];
       })
       .sum((d) => d[SALES])
