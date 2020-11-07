@@ -131,7 +131,12 @@ let updateChart = () => {
 
   svg.on("click", () => zoom(cPack));
 
-  const node = svg.selectAll("g").data(cPack.descendants().slice(1)).join("g"); // skipping circle for top-most level
+  const node = svg
+    .selectAll("g")
+    .data(cPack.descendants().slice(1))
+    .join("g")
+    .style("display", (d) => (d.parent === cPack ? "inline" : "none")) // prevent mouseover and mousedown on invisible circles // skipping circle for top-most level
+    .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
 
   const circle = node
     .append("circle")
@@ -141,9 +146,16 @@ let updateChart = () => {
     .attr("stroke", (d) => circleColors[d.depth])
     .attr("stroke-width", "1px")
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0)) // TODO: add ranking and only display high ranked games
+    .attr("depth", (d) => d.depth);
+
+  const nucleus = node
+    .append("circle")
+    .attr("class", "nucleus")
+    .attr("r", 15)
+    .attr("fill", (d) => circleColors[d.depth])
+    .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
     .attr("depth", (d) => d.depth)
-    .attr("pointer-events", (d) => (!d.children ? "none" : null)) // no children, no click
-    .style("display", (d) => (d.parent === cPack ? "inline" : "none")); // prevent mouseover and mousedown on invisible circles
+    .attr("pointer-events", "none");
 
   // node
   //   .selectAll("circle")
@@ -158,34 +170,35 @@ let updateChart = () => {
   // console.log("node exit", node.select("circle").exit());
 
   node
-    .on("mouseover", (d) => {
-      node
-        .filter((e) => e !== d && e.parent === d.parent)
-        .classed("dimmed", true);
+    .on("mouseover", function (d) {
+      const filtered = node.filter((e) => e !== d && e.parent === d.parent);
+
+      filtered.select("circle").transition(250).attr("fill-opacity", 0.3);
+      filtered
+        .select("circle.nucleus")
+        .transition(250)
+        .attr("fill-opacity", 0.3);
+      filtered.select("text").transition(250).attr("fill-opacity", 0.3);
     })
     .on("mouseout", (d) => {
-      node
-        .filter((e) => e !== d && e.parent === d.parent)
-        .classed("dimmed", false);
+      const filtered = node.filter((e) => e !== d && e.parent === d.parent);
+
+      filtered.select("circle").transition(250).attr("fill-opacity", 0.5);
+      filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 1);
+      filtered.select("text").transition(250).attr("fill-opacity", 1);
     })
-    .on(
-      // if clicked the currently focused node, zoom all the way out(?)
-      "click",
-      (d, i) => {
-        if (currFocus === d) {
-          zoom(d.parent), d3.event.stopPropagation();
-        } else {
-          zoom(d), d3.event.stopPropagation();
-        }
+    .on("click", (d, i) => {
+      if (currFocus === d) {
+        zoom(d.parent), d3.event.stopPropagation();
+      } else {
+        zoom(d), d3.event.stopPropagation();
       }
-    );
+    });
 
   const label = node
     .append("text")
-    // .data(cPack.descendants())
+    .attr("dx", 22)
     .style("fill", (d) => circleColors[d.depth])
-    // .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
-    .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .text((d) => d.data["key"] || d.data["Game"]);
 
   label.on("mousedown", () => false);
@@ -195,18 +208,25 @@ let updateChart = () => {
 
     view = v;
 
-    // label.attr("transform", (d) => {
-    //   return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
-    // });
-    node.attr("transform", (d) => {
-      return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
-    });
-    circle.attr("r", (d) => d.r * k);
+    node
+      .filter(function (d) {
+        return d.parent === currFocus || this.style.display === "inline";
+      })
+      .attr("transform", (d) => {
+        return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
+      });
+    circle
+      .filter(function (d) {
+        return d.parent === currFocus || this.style.display === "inline";
+      })
+      .attr("r", (d) => d.r * k);
   };
 
   let zoom = (d) => {
+    // change focus to new node
     currFocus = d;
 
+    // zoom
     const transition = svg
       .transition()
       .duration(zoomDuration)
@@ -218,6 +238,18 @@ let updateChart = () => {
           currFocus.r * 2,
         ]);
         return (t) => zoomTo(i(t));
+      });
+
+    // swap
+    node
+      .transition(zoomDuration)
+      .on("start", function (d) {
+        if (d === currFocus || d.parent === currFocus)
+          this.style.display = "inline";
+      })
+      .on("end", function (d) {
+        if (d !== currFocus && d.parent !== currFocus)
+          this.style.display = "none";
       });
 
     circle
@@ -233,20 +265,13 @@ let updateChart = () => {
           this.style.display = "none";
       });
 
-    label
-      .filter(function (d) {
-        return d.parent === currFocus || this.style.display === "inline";
-      })
+    nucleus
       .transition(zoomDuration)
-      .style("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
-      .on("start", function (d) {
-        // if (d.parent === currFocus) this.style.display = "inline";
-        if (d.parent !== currFocus) this.style.display = "none";
-      })
-      .on("end", function (d) {
-        if (d.parent === currFocus) this.style.display = "inline";
-        // if (d.parent !== currFocus) this.style.display = "none";
-      });
+      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+
+    label
+      .transition(zoomDuration)
+      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
   };
 
   zoomTo([cPack.x, cPack.y, cPack.r * 2]);

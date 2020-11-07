@@ -1,19 +1,14 @@
 #svg circle:hover {
   stroke-width: 4px;
-  transition: stroke-width 0.25s ease-in;
+  transition: stroke-width 0.25s ease-in-out;
 }
 
 #svg circle,
 #svg text {
-  transition: fill-opacity 0.25s ease-in-out, stroke-opacity 0.25s ease-in;
+  /* transition: fill-opacity 0.25s ease-in-out, stroke-opacity 0.25s ease-in-out; */
 }
 
 #svg g text {
   pointer-events: none;
   font: 700 24px "Open Sans", sans-serif;
-}
-
-#svg g.dimmed circle,
-#svg g.dimmed text {
-  fill-opacity: 0.3;
 }
