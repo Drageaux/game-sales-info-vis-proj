@@ -5,9 +5,15 @@
 
 #svg circle,
 #svg text {
-  transition: fill-opacity 0.25s ease-in, stroke-opacity 0.25s ease-in;
+  transition: fill-opacity 0.5s ease-in, stroke-opacity 0.25s ease-in;
 }
 
-#svg .dimmed {
+#svg g text {
+  pointer-events: none;
+  font: 700 24px "Open Sans", sans-serif;
+}
+
+#svg g.dimmed circle,
+#svg g.dimmed text {
   fill-opacity: 0.3;
 }

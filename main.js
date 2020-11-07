@@ -93,8 +93,8 @@ const svg = d3
   .style("background", color(0))
   .style("cursor", "pointer");
 
-const nodeGroup = svg.append("g");
-const labelGroup = svg.append("g");
+// const nodeGroup = svg.append("g");
+// const labelGroup = svg.append("g");
 
 d3.csv("./circle_pack.csv").then((data) => {
   games = data;
@@ -131,10 +131,10 @@ let updateChart = () => {
 
   svg.on("click", () => zoom(cPack));
 
-  const node = nodeGroup
-    .selectAll("circle")
-    .data(cPack.descendants().slice(1)) // skipping circle for top-most level
-    .join("circle") // if the joining selection isn't empty, run another iteration
+  const node = svg.selectAll("g").data(cPack.descendants().slice(1)).join("g"); // skipping circle for top-most level
+
+  const circle = node
+    .append("circle")
     .attr("r", (d) => d.r)
     .attr("fill", (d) => circleColors[d.depth])
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
@@ -159,22 +159,12 @@ let updateChart = () => {
 
   node
     .on("mouseover", (d) => {
-      nodeGroup
-        .selectAll("circle")
-        .filter((e) => e !== d && e.parent === d.parent)
-        .classed("dimmed", true);
-      labelGroup
-        .selectAll("text")
+      node
         .filter((e) => e !== d && e.parent === d.parent)
         .classed("dimmed", true);
     })
     .on("mouseout", (d) => {
-      nodeGroup
-        .selectAll("circle")
-        .filter((e) => e !== d && e.parent === d.parent)
-        .classed("dimmed", false);
-      labelGroup
-        .selectAll("text")
+      node
         .filter((e) => e !== d && e.parent === d.parent)
         .classed("dimmed", false);
     })
@@ -190,13 +180,9 @@ let updateChart = () => {
       }
     );
 
-  const label = labelGroup
-    .style("font", "700 18px 'Open Sans', sans-serif")
-    .attr("pointer-events", "none")
-    .attr("text-anchor", "middle")
-    .selectAll("text")
-    .data(cPack.descendants())
-    .join("text")
+  const label = node
+    .append("text")
+    // .data(cPack.descendants())
     .style("fill", (d) => circleColors[d.depth])
     // .style("fill-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
@@ -209,13 +195,13 @@ let updateChart = () => {
 
     view = v;
 
-    label.attr("transform", (d) => {
-      return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
-    });
+    // label.attr("transform", (d) => {
+    //   return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
+    // });
     node.attr("transform", (d) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
     });
-    node.attr("r", (d) => d.r * k);
+    circle.attr("r", (d) => d.r * k);
   };
 
   let zoom = (d) => {
@@ -234,7 +220,7 @@ let updateChart = () => {
         return (t) => zoomTo(i(t));
       });
 
-    node
+    circle
       .transition(zoomDuration)
       .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
       .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
