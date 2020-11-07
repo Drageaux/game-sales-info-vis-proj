@@ -112,6 +112,7 @@ let shuffleArray = () => {
 
 let updateChart = () => {
   let filteredGames = games.filter((e) => e[SALES] > 0.0 && +e[YEAR] == 2001);
+  // TODO: add ranking and only display high ranked games
   let dataByRegion = d3
     .nest()
     .key((d) => d[layers[0]])
@@ -131,6 +132,7 @@ let updateChart = () => {
   const nodeUpdate = svg
     .selectAll("g")
     .data(cPack.descendants().slice(1), (d) => d.data["key"] | d.data[GAME])
+    .attr("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
   const nodeEnter = nodeUpdate.enter().append("g");
 
@@ -138,10 +140,10 @@ let updateChart = () => {
     .append("circle")
     .attr("r", (d) => d.r)
     .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
+    .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0))
     .attr("stroke", (d) => circleColors[d.depth])
     .attr("stroke-width", "1px")
-    .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0)) // TODO: add ranking and only display high ranked games
+    .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
     .attr("depth", (d) => d.depth);
 
   const nucleus = nodeEnter
@@ -149,7 +151,7 @@ let updateChart = () => {
     .attr("class", "nucleus")
     .attr("r", 15)
     .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
+    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", "none");
 
@@ -165,21 +167,19 @@ let updateChart = () => {
   //   .attr("display", (d) => (d.parent === cPack ? "inline" : "none"));
   // nodeExit.select("text").attr;
 
-  console.log("node", nodeEnter);
-
   const label = nodeEnter
     .append("text")
     .attr("dx", 22)
     .attr("fill", (d) => circleColors[d.depth])
+    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
     .text((d) => d.data["key"] || d.data[GAME]);
   label.on("mousedown", () => false);
 
+  // all node
   const node = nodeUpdate
     .merge(nodeEnter)
     .on("mouseover", function (d) {
       const filtered = node.filter((e) => e !== d && e.parent === d.parent);
-      console.log(filtered);
-
       filtered.select("circle").transition(250).attr("fill-opacity", 0.3);
       filtered
         .select("circle.nucleus")
@@ -205,11 +205,10 @@ let updateChart = () => {
   // ********************************************************************* //
   // ***************************** FUNCTIONS ***************************** //
   // ********************************************************************* //
-  let update = () => {
-    // update
+  let animate = () => {
+    // update animation
     const node = nodeUpdate
       .merge(nodeEnter)
-      // .filter("")
       .transition(zoomDuration)
       .on("start", function (d) {
         if (d === currFocus || d.parent === currFocus)
@@ -238,7 +237,7 @@ let updateChart = () => {
       });
 
     node
-      .select("circle")
+      .select("circle.nucleus")
       .transition(zoomDuration)
       .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
 
@@ -287,7 +286,7 @@ let updateChart = () => {
         return (t) => zoomTo(i(t));
       });
 
-    update();
+    animate();
   };
 
   zoomTo([cPack.x, cPack.y, cPack.r * 2]);
