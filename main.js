@@ -209,13 +209,6 @@ let updateChart = () => {
     .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
   label.on("mousedown", () => false);
 
-  // const nodeExit = svg.selectAll("g").exit().transition(250).remove();
-  // nodeExit
-  //   .select("circle")
-  //   .attr("r", 0)
-  //   .attr("display", (d) => (d.parent === cPack ? "inline" : "none"));
-  // nodeExit.select("text").attr;
-
   // ********************************************************************* //
   // **************************** MOUSE EVENTS *************************** //
   // ********************************************************************* //
