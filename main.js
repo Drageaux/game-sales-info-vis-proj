@@ -106,7 +106,6 @@ let shuffleArray = () => {
   }
 
   // right now only changing the order of the layers require exit
-  zoomTo(currFocus);
   const currentNodes = svg.selectAll("g").filter(function (d) {
     return d.parent === currFocus || this.style.display === "inline";
   });
