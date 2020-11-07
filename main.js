@@ -105,16 +105,16 @@ let shuffleArray = () => {
     [layers[i], layers[j]] = [layers[j], layers[i]];
   }
 
+  // right now only changing the order of the layers require exit
+  zoomTo(currFocus);
   const currentNodes = svg.selectAll("g").filter(function (d) {
     return d.parent === currFocus || this.style.display === "inline";
   });
-  console.log(currentNodes._groups);
-
   currentNodes
     .select("circle")
     .transition()
     .duration(750)
-    // .attr("r", 0)
+    .attr("r", 0)
     .attr("fill-opacity", 0);
   currentNodes
     .select("circle.nucleus")
@@ -244,95 +244,89 @@ let updateChart = () => {
       }
     });
 
-  // ********************************************************************* //
-  // ***************************** FUNCTIONS ***************************** //
-  // ********************************************************************* //
-  let animate = () => {
-    // update animation
-    const node = nodeUpdate
-      .merge(nodeEnter)
-      .transition(zoomDuration)
-      .on("start", function (d) {
-        if (d === currFocus || d.parent === currFocus)
-          this.style.display = "inline";
-        else this.style.display = "none";
-      })
-      .on("end", function (d) {
-        if (d !== currFocus && d.parent !== currFocus)
-          this.style.display = "none";
-        else this.style.display = "inline";
-      });
-
-    node
-      .select("circle")
-      .transition(zoomDuration)
-      .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
-      .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
-      // make the outer circle display properly
-      .on("start", function (d) {
-        if (d === currFocus || d.parent === currFocus)
-          this.style.display = "inline";
-      })
-      .on("end", function (d) {
-        if (d !== currFocus && d.parent !== currFocus)
-          this.style.display = "none";
-      });
-
-    node
-      .select("circle.nucleus")
-      .transition(zoomDuration)
-      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
-
-    node
-      .select("text")
-      .transition(zoomDuration)
-      .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
-  };
-
-  let zoomTo = (v) => {
-    const k = width / v[2];
-
-    view = v;
-
-    const node = nodeEnter
-      .merge(nodeUpdate)
-      .filter(function (d) {
-        return d.parent === currFocus || this.style.display === "inline";
-      })
-      .attr("transform", (d) => {
-        if (d.x === 0) console.log(d);
-        return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
-      });
-    node
-      .select("circle")
-      .filter(function (d) {
-        return d.parent === currFocus || this.style.display === "inline";
-      })
-      .attr("r", (d) => d.r * k);
-  };
-
-  let zoom = (d) => {
-    // change focus to new node
-    currFocus = d;
-
-    // zoom
-    const transition = svg
-      .transition()
-      .duration(zoomDuration)
-      .tween("zoom", () => {
-        // view is the starting point, current focus is the next point
-        const i = d3.interpolateZoom(view, [
-          currFocus.x,
-          currFocus.y,
-          currFocus.r * 2,
-        ]);
-        return (t) => zoomTo(i(t));
-      });
-
-    animate();
-  };
-
   zoomTo([cPack.x, cPack.y, cPack.r * 2]);
+};
+
+// ********************************************************************* //
+// ***************************** FUNCTIONS ***************************** //
+// ********************************************************************* //
+let animate = () => {
+  // update animation
+  const node = svg
+    .selectAll("g")
+    .transition(zoomDuration)
+    .on("start", function (d) {
+      if (d === currFocus || d.parent === currFocus)
+        this.style.display = "inline";
+      else this.style.display = "none";
+    })
+    .on("end", function (d) {
+      if (d !== currFocus && d.parent !== currFocus)
+        this.style.display = "none";
+      else this.style.display = "inline";
+    });
+
+  node
+    .select("circle")
+    .transition(zoomDuration)
+    .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
+    .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
+    // make the outer circle display properly
+    .on("start", function (d) {
+      if (d === currFocus || d.parent === currFocus)
+        this.style.display = "inline";
+    })
+    .on("end", function (d) {
+      if (d !== currFocus && d.parent !== currFocus)
+        this.style.display = "none";
+    });
+
+  node
+    .select("circle.nucleus")
+    .transition(zoomDuration)
+    .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+
+  node
+    .select("text")
+    .transition(zoomDuration)
+    .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+};
+
+let zoomTo = (v) => {
+  const k = width / v[2];
+
+  view = v;
+
+  const node = svg
+    .selectAll("g")
+    .filter(function (d) {
+      return d.parent === currFocus || this.style.display === "inline";
+    })
+    .attr("transform", (d) => {
+      return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
+    });
+  node.select("circle").attr("r", (d) => d.r * k);
+};
+
+let zoom = (d) => {
+  // change focus to new node
+  currFocus = d;
+
+  // zoom
+  const transition = svg
+    .transition()
+    .duration(zoomDuration)
+    .tween("zoom", () => {
+      // view is the starting point, current focus is the next point
+      const i = d3.interpolateZoom(view, [
+        currFocus.x,
+        currFocus.y,
+        currFocus.r * 2,
+      ]);
+      return (t) => zoomTo(i(t));
+    });
+
+  animate();
 };
 
 // circle packing function
