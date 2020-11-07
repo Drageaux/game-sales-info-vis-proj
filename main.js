@@ -93,9 +93,6 @@ const svg = d3
   .style("background", color(0))
   .style("cursor", "pointer");
 
-// const nodeGroup = svg.append("g");
-// const labelGroup = svg.append("g");
-
 d3.csv("./circle_pack.csv").then((data) => {
   games = data;
   updateChart();
@@ -107,6 +104,31 @@ let shuffleArray = () => {
     const j = Math.floor(Math.random() * (i + 1));
     [layers[i], layers[j]] = [layers[j], layers[i]];
   }
+
+  const currentNodes = svg.selectAll("g").filter(function (d) {
+    return d.parent === currFocus || this.style.display === "inline";
+  });
+  console.log(currentNodes._groups);
+
+  currentNodes
+    .select("circle")
+    .transition()
+    .duration(750)
+    // .attr("r", 0)
+    .attr("fill-opacity", 0);
+  currentNodes
+    .select("circle.nucleus")
+    .transition()
+    .duration(750)
+    .attr("r", 0)
+    .attr("fill-opacity", 0);
+  currentNodes
+    .select("text")
+    .transition()
+    .duration(750)
+    .attr("fill-opacity", 0);
+
+  svg.selectAll("g").transition().delay(750).remove();
   updateChart();
 };
 
@@ -121,7 +143,7 @@ let updateChart = () => {
     .entries(filteredGames);
 
   let root = {
-    key: "Regions",
+    key: layers[0],
     values: dataByRegion,
   };
   let cPack = pack(root);
@@ -131,51 +153,68 @@ let updateChart = () => {
 
   const nodeUpdate = svg
     .selectAll("g")
-    .data(cPack.descendants().slice(1), (d) => d.data["key"] | d.data[GAME])
+    .data(cPack.descendants(), (d) => d.data["key"] | d.data[GAME])
     .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
+
   const nodeEnter = nodeUpdate
     .enter()
     .append("g")
     .style("display", (d) => (d.parent === cPack ? "inline" : "none"));
 
+  // create circle
   const circle = nodeEnter
     .append("circle")
-    .attr("r", (d) => d.r)
     .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0))
+    .attr("fill-opacity", 0)
     .attr("stroke", (d) => circleColors[d.depth])
     .attr("stroke-width", "1px")
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
     .attr("depth", (d) => d.depth);
+  // transition in
+  circle
+    .filter((d) => d.parent === cPack)
+    .transition(750)
+    .delay(1000)
+    .attr("r", (d) => d.r)
+    .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0));
 
+  // create nucleus
   const nucleus = nodeEnter
     .append("circle")
     .attr("class", "nucleus")
-    .attr("r", 15)
     .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
+    .attr("fill-opacity", 0)
     .attr("depth", (d) => d.depth)
-    .attr("pointer-events", "none");
+    .attr("pointer-events", "none")
+    .attr("r", 15);
+  // transition in
+  nucleus
+    .filter((d) => d.parent === cPack)
+    .transition(750)
+    .delay(1000)
+    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
 
-  // const nodeExit = svg
-  //   .selectAll("g")
-  //   .data(cPack.descendants(), (d) => d.data["key"])
-  //   .exit()
-  //   .transition(250)
-  //   .remove();
+  // create label
+  const label = nodeEnter
+    .append("text")
+    .attr("fill", (d) => circleColors[d.depth])
+    .attr("dx", 22)
+    .text((d) => d.data["key"] || d.data[GAME])
+    .attr("fill-opacity", 0);
+  // transition
+  label
+    .filter((d) => d.parent === cPack)
+    .transition(750)
+    .delay(1000)
+    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
+  label.on("mousedown", () => false);
+
+  // const nodeExit = svg.selectAll("g").exit().transition(250).remove();
   // nodeExit
   //   .select("circle")
   //   .attr("r", 0)
   //   .attr("display", (d) => (d.parent === cPack ? "inline" : "none"));
   // nodeExit.select("text").attr;
-
-  const label = nodeEnter
-    .append("text")
-    .attr("dx", 22)
-    .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0))
-    .text((d) => d.data["key"] || d.data[GAME]);
-  label.on("mousedown", () => false);
 
   // ********************************************************************* //
   // **************************** MOUSE EVENTS *************************** //
@@ -193,7 +232,6 @@ let updateChart = () => {
     })
     .on("mouseout", (d) => {
       const filtered = node.filter((e) => e !== d && e.parent === d.parent);
-
       filtered.select("circle").transition(250).attr("fill-opacity", 0.5);
       filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 1);
       filtered.select("text").transition(250).attr("fill-opacity", 1);
@@ -262,6 +300,7 @@ let updateChart = () => {
         return d.parent === currFocus || this.style.display === "inline";
       })
       .attr("transform", (d) => {
+        if (d.x === 0) console.log(d);
         return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
       });
     node
