@@ -198,7 +198,7 @@ let updateChart = () => {
   const label = node
     .append("text")
     .attr("dx", 22)
-    .style("fill", (d) => circleColors[d.depth])
+    .attr("fill", (d) => circleColors[d.depth])
     .text((d) => d.data["key"] || d.data["Game"]);
 
   label.on("mousedown", () => false);

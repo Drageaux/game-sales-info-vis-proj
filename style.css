@@ -1,11 +1,9 @@
 #svg circle:hover {
   stroke-width: 4px;
-  transition: stroke-width 0.25s ease-in-out;
 }
 
-#svg circle,
-#svg text {
-  /* transition: fill-opacity 0.25s ease-in-out, stroke-opacity 0.25s ease-in-out; */
+#svg circle {
+  transition: stroke-width 0.25s ease-in-out;
 }
 
 #svg g text {
