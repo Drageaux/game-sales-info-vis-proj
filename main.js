@@ -132,9 +132,11 @@ let updateChart = () => {
   const nodeUpdate = svg
     .selectAll("g")
     .data(cPack.descendants().slice(1), (d) => d.data["key"] | d.data[GAME])
-    .attr("display", (d) => (d.parent === cPack ? "inline" : "none"))
     .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
-  const nodeEnter = nodeUpdate.enter().append("g");
+  const nodeEnter = nodeUpdate
+    .enter()
+    .append("g")
+    .style("display", (d) => (d.parent === cPack ? "inline" : "none"));
 
   const circle = nodeEnter
     .append("circle")
@@ -175,17 +177,19 @@ let updateChart = () => {
     .text((d) => d.data["key"] || d.data[GAME]);
   label.on("mousedown", () => false);
 
-  // all node
+  // ********************************************************************* //
+  // **************************** MOUSE EVENTS *************************** //
+  // ********************************************************************* //
   const node = nodeUpdate
     .merge(nodeEnter)
     .on("mouseover", function (d) {
       const filtered = node.filter((e) => e !== d && e.parent === d.parent);
-      filtered.select("circle").transition(250).attr("fill-opacity", 0.3);
+      filtered.select("circle").transition(250).attr("fill-opacity", 0.2);
       filtered
         .select("circle.nucleus")
         .transition(250)
-        .attr("fill-opacity", 0.3);
-      filtered.select("text").transition(250).attr("fill-opacity", 0.3);
+        .attr("fill-opacity", 0.2);
+      filtered.select("text").transition(250).attr("fill-opacity", 0.2);
     })
     .on("mouseout", (d) => {
       const filtered = node.filter((e) => e !== d && e.parent === d.parent);
