@@ -246,16 +246,19 @@ let updateChart = () => {
       .on("start", function (d) {
         if (d === currFocus || d.parent === currFocus)
           this.style.display = "inline";
+        else this.style.display = "none";
       })
       .on("end", function (d) {
         if (d !== currFocus && d.parent !== currFocus)
           this.style.display = "none";
+        else this.style.display = "inline";
       });
 
     circle
       .transition(zoomDuration)
       .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
       .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
+      // make the outer circle display properly
       .on("start", function (d) {
         if (d === currFocus || d.parent === currFocus)
           this.style.display = "inline";
