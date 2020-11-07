@@ -5,7 +5,7 @@
 
 #svg circle,
 #svg text {
-  transition: fill-opacity 0.5s ease-in, stroke-opacity 0.25s ease-in;
+  transition: fill-opacity 0.25s ease-in-out, stroke-opacity 0.25s ease-in;
 }
 
 #svg g text {
