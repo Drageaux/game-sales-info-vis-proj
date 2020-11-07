@@ -136,10 +136,10 @@ let updateChart = () => {
     .data(cPack.descendants().slice(1)) // skipping circle for top-most level
     .join("circle") // if the joining selection isn't empty, run another iteration
     .attr("r", (d) => d.r)
-    .attr("fill", circleColors[0])
-    .attr("fill-opacity", "1")
-    .attr("stroke", (d) => circleColors[d.depth])
-    .attr("stroke-width", "1px")
+    .attr("fill", (d) => circleColors[d.depth])
+    .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
+    // .attr("stroke", (d) => circleColors[d.depth])
+    // .attr("stroke-width", "1px")
     .attr("stroke-opacity", (d) => (d.parent === cPack ? 1 : 0)) // TODO: add ranking and only display high ranked games
     .attr("depth", (d) => d.depth)
     .attr("pointer-events", (d) => (!d.children ? "none" : null)) // no children, no click
@@ -158,7 +158,26 @@ let updateChart = () => {
   // console.log("node exit", node.select("circle").exit());
 
   node
-    .on("mousedown", function () {})
+    .on("mouseover", (d) => {
+      nodeGroup
+        .selectAll("circle")
+        .filter((e) => e !== d && e.parent === d.parent)
+        .classed("dimmed", true);
+      labelGroup
+        .selectAll("text")
+        .filter((e) => e !== d && e.parent === d.parent)
+        .classed("dimmed", true);
+    })
+    .on("mouseout", (d) => {
+      nodeGroup
+        .selectAll("circle")
+        .filter((e) => e !== d && e.parent === d.parent)
+        .classed("dimmed", false);
+      labelGroup
+        .selectAll("text")
+        .filter((e) => e !== d && e.parent === d.parent)
+        .classed("dimmed", false);
+    })
     .on(
       // if clicked the currently focused node, zoom all the way out(?)
       "click",
@@ -216,10 +235,8 @@ let updateChart = () => {
       });
 
     node
-      .transition(transition)
-      .attr("stroke-opacity", (d) =>
-        d === currFocus || d.parent === currFocus ? 1 : 0
-      )
+      .transition(0)
+      .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
       .on("start", function (d) {
         if (d === currFocus || d.parent === currFocus)
           this.style.display = "inline";
@@ -233,7 +250,7 @@ let updateChart = () => {
       .filter(function (d) {
         return d.parent === currFocus || this.style.display === "inline";
       })
-      .transition(transition)
+      .transition(250)
       .style("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0))
       .on("start", function (d) {
         if (d.parent === currFocus) this.style.display = "inline";

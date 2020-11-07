@@ -1,4 +1,13 @@
-circle:hover {
+/* #svg circle:hover {
   stroke-width: 4px;
   transition: stroke-width 125ms ease-in;
+} */
+
+#svg circle,
+#svg text {
+  transition: fill-opacity 0.25s ease-in;
+}
+
+#svg .dimmed {
+  fill-opacity: 0.2 !important;
 }
