@@ -56,6 +56,7 @@ d3.csv("./circle_pack.csv").then((data) => {
       console.log(val);
       yearRange = val;
       updateChart();
+      zoom(currFocus);
       d3.select("p#value-range").text(val.map(d3.format(".0")).join("-"));
     });
 
@@ -172,12 +173,14 @@ let updateChart = () => {
     .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
 
   // create label
-  const label = nodeEnter
+  const labelEnter = nodeEnter
     .append("text")
     .attr("fill", (d) => circleColors[d.depth])
     .attr("y", -5.5)
     .attr("x", 22)
     .attr("fill-opacity", 0);
+  const label = nodeEnter.merge(nodeUpdate).select("text");
+  label.selectAll("tspan").remove();
   label.append("tspan").text((d) => {
     return d.data[0] || d.data[GAME];
   });
