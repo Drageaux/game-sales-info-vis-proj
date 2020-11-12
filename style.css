@@ -15,3 +15,7 @@
   pointer-events: none;
   font: 700 24px "Open Sans", sans-serif;
 }
+
+#details ul {
+  font: 700 1rem "Open Sans", sans-serif;
+}
