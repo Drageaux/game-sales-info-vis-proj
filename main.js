@@ -113,7 +113,7 @@ let updateChart = () => {
   let filteredGames = games.filter(
     (e) => e[SALES] > 1 && +e[YEAR] >= yearRange[0] && +e[YEAR] <= yearRange[1]
   );
-  console.log(filteredGames.length, yearRange[0], yearRange[1]);
+  // console.log(filteredGames.length, yearRange[0], yearRange[1]);
   let dataByRegion = d3.group(
     filteredGames,
     (d) => d[layers[0]],
@@ -218,16 +218,24 @@ let updateChart = () => {
 // ************************ MOUSE EVENT HELPERS ************************ //
 // ********************************************************************* //
 let onMouseOver = (event, d) => {
-  console.log(event, d);
   const filtered = svg
     .selectAll("g")
     .filter((e) => e.parent === d.parent && e !== d);
-  filtered.select("circle").transition(250).attr("fill-opacity", 0.2);
-  filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 0.2);
+  filtered
+    .select("circle")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 0.2);
+  filtered
+    .select("circle.nucleus")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 0.2);
   filtered
     .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
     .select("text")
-    .transition(250)
+    .transition()
+    .duration(250)
     .attr("fill-opacity", 0.2);
   // dim the non-selected games in the sidebar too
   if (currFocus.depth === 3) {
@@ -235,23 +243,31 @@ let onMouseOver = (event, d) => {
       .select("#details")
       .selectAll("li")
       .filter((e) => e.parent === d.parent && e !== d)
-      .transition(250)
+      .transition()
+      .duration(250)
       .style("opacity", 0.2);
   }
 };
 
 let onMouseOut = (event, d) => {
-  console.log(event, d);
-
   const filtered = svg
     .selectAll("g")
     .filter((e) => e !== d && e.parent === d.parent);
-  filtered.select("circle").transition(250).attr("fill-opacity", 0.5);
-  filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 1);
+  filtered
+    .select("circle")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 0.5);
+  filtered
+    .select("circle.nucleus")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 1);
   filtered
     .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
     .select("text")
-    .transition(250)
+    .transition()
+    .duration(250)
     .attr("fill-opacity", 1);
   // return the dimmed games in the sidebar to normal
   if (currFocus.depth === 3) {
