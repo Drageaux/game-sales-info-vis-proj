@@ -20,18 +20,16 @@
       <div id="graph" class="col-8">
         <svg id="svg"></svg>
       </div>
-      <div id="details" class="col-4">
-        <ul>
-          <li>test</li>
-          <li>test</li>
-          <li>test</li>
-          <li>test</li>
-        </ul>
-        <button onclick="shuffleArray()">Reorder</button>
+      <div id="sidebar" class="col-4">
+        <div id="orderer">
+          <button onclick="shuffleArray()">Reorder</button>
+        </div>
+        <div id="details"></div>
       </div>
     </div>
   </body>
   <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://d3plus.org/js/d3plus-text.v0.10.full.min.js"></script>
   <script src="https://unpkg.com/d3-simple-slider"></script>
   <script
     src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
