@@ -148,8 +148,9 @@ let updateChart = () => {
   // transition in
   circle
     .filter((d) => d.parent === cPack)
-    .transition(750)
+    .transition()
     .delay(1000)
+    .duration(750)
     .attr("r", (d) => d.r)
     .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0));
 
@@ -165,8 +166,9 @@ let updateChart = () => {
   // transition in
   nucleus
     .filter((d) => d.parent === cPack)
-    .transition(750)
+    .transition()
     .delay(1000)
+    .duration(750)
     .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
 
   // create label
@@ -185,12 +187,13 @@ let updateChart = () => {
     .attr("dy", "1.15em")
     .attr("x", 22)
     .text((d) => `$${d.value.toFixed(2)}m`);
-  // transition
   label
     .filter((d) => d.parent === cPack)
-    .transition(750)
+    .transition()
     .delay(1000)
+    .duration(750)
     .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
+  // transition
   label.on("mousedown", () => false);
 
   // ********************************************************************* //
@@ -215,6 +218,7 @@ let updateChart = () => {
 // ************************ MOUSE EVENT HELPERS ************************ //
 // ********************************************************************* //
 let onMouseOver = (event, d) => {
+  console.log(event, d);
   const filtered = svg
     .selectAll("g")
     .filter((e) => e.parent === d.parent && e !== d);
@@ -237,6 +241,8 @@ let onMouseOver = (event, d) => {
 };
 
 let onMouseOut = (event, d) => {
+  console.log(event, d);
+
   const filtered = svg
     .selectAll("g")
     .filter((e) => e !== d && e.parent === d.parent);
@@ -263,9 +269,11 @@ let onMouseOut = (event, d) => {
 // ********************************************************************* //
 let animate = () => {
   // update animation
-  const node = svg
-    .selectAll("g")
-    .transition(zoomDuration)
+  const node = svg.selectAll("g");
+
+  node
+    .transition()
+    .duration(zoomDuration)
     .on("start", function (d) {
       if (d === currFocus || d.parent === currFocus)
         this.style.display = "inline";
@@ -279,8 +287,8 @@ let animate = () => {
 
   node
     .select("circle")
-    .transition(zoomDuration)
-    .attr("r", (d) => d.r)
+    .transition()
+    .duration(zoomDuration)
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
     // make the outer circle display properly
@@ -295,12 +303,14 @@ let animate = () => {
 
   node
     .select("circle.nucleus")
-    .transition(zoomDuration)
+    .transition()
+    .duration(zoomDuration)
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
 
   node
     .select("text")
-    .transition(zoomDuration)
+    .transition()
+    .duration(zoomDuration)
     .attr("fill-opacity", (d) =>
       d.parent === currFocus &&
       // if is a game, display text for only top 5
