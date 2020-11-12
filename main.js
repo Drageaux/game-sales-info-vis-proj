@@ -209,7 +209,7 @@ let updateChart = () => {
 // ********************************************************************* //
 // ************************ MOUSE EVENT HELPERS ************************ //
 // ********************************************************************* //
-let onMouseOver = (d) => {
+let onMouseOver = (event, d) => {
   const filtered = svg
     .selectAll("g")
     .filter((e) => e.parent === d.parent && e !== d);
@@ -231,7 +231,7 @@ let onMouseOver = (d) => {
   }
 };
 
-let onMouseOut = (d) => {
+let onMouseOut = (event, d) => {
   const filtered = svg
     .selectAll("g")
     .filter((e) => e !== d && e.parent === d.parent);
@@ -411,6 +411,5 @@ let pack = (data) => {
       .sum((d) => d[SALES])
       .sort((a, b) => b[SALES] - a[SALES])
   );
-  console.log(result);
   return result;
 };
