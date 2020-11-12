@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
+    <div id="heading" class="header"><h1>Game Sales</h1></div>
     <div id="content" class="container-fluid row mx-auto">
       <div id="graph" class="col-8">
         <svg id="svg"></svg>
@@ -26,6 +27,10 @@
         </div>
         <div id="details"></div>
       </div>
+    </div>
+    <div id="slider">
+      <div class="col-sm-2"><p id="value-range"></p></div>
+      <div class="col-sm"><div id="slider-range"></div></div>
     </div>
   </body>
   <script src="https://d3js.org/d3.v5.min.js"></script>

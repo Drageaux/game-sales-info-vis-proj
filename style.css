@@ -1,6 +1,17 @@
-#content {
+body {
   background: hsl(224, 56%, 16%);
+}
+
+#heading h1 {
   color: white;
+  text-align: center;
+  margin: 6vmin 0;
+  font: 700 48px "Open Sans", sans-serif !important;
+}
+
+#content {
+  color: white;
+  max-width: 100vmin;
 }
 
 #svg circle:hover {
