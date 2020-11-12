@@ -141,11 +141,16 @@ let updateChart = () => {
   const label = nodeEnter
     .append("text")
     .attr("fill", (d) => circleColors[d.depth])
-    .attr("dx", 22)
-    .attr("dy", 0)
-    .attr("fill-opacity", 0)
-    .text((d) => d.data["key"] || d.data[GAME])
-    .call(wrap, 40);
+    .attr("y", -5.5)
+    .attr("x", 22)
+    .attr("fill-opacity", 0);
+  label.append("tspan").text((d) => d.data["key"] || d.data[GAME]);
+  label
+    .append("tspan")
+    .attr("font-weight", 400)
+    .attr("dy", "1.15em")
+    .attr("x", 22)
+    .text((d) => `$${d.value.toFixed(2)}m`);
   // transition
   label
     .filter((d) => d.parent === cPack)
@@ -381,38 +386,3 @@ let pack = (data) => {
       .sort((a, b) => b[SALES] - a[SALES])
   );
 };
-
-function wrap(text, width) {
-  text.each(function () {
-    var text = d3.select(this),
-      words = text.text().split(/\s+/).reverse(),
-      word,
-      line = [],
-      lineNumber = 0, //<-- 0!
-      lineHeight = 1.2, // ems
-      x = text.attr("x"), //<-- include the x!
-      y = text.attr("y"),
-      dy = text.attr("dy") || 0; //<-- null check
-    tspan = text
-      .text(null)
-      .append("tspan")
-      .attr("x", x)
-      .attr("y", y)
-      .attr("dy", dy + "em");
-    while ((word = words.pop())) {
-      line.push(word);
-      tspan.text(line.join(" "));
-      if (tspan.node().getComputedTextLength() > width) {
-        line.pop();
-        tspan.text(line.join(" "));
-        line = [word];
-        tspan = text
-          .append("tspan")
-          .attr("x", x)
-          .attr("y", y)
-          .attr("dy", ++lineNumber * lineHeight + dy + "em")
-          .text(word);
-      }
-    }
-  });
-}
