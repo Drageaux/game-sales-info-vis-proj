@@ -28,6 +28,8 @@ let currFocus;
 let view;
 let zoomDuration = 750;
 
+const sidebar = d3.select("#sidebar");
+
 const svg = d3
   .select("svg")
   .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
@@ -139,9 +141,16 @@ let updateChart = () => {
   const label = nodeEnter
     .append("text")
     .attr("fill", (d) => circleColors[d.depth])
-    .attr("dx", 22)
-    .text((d) => d.data["key"] || d.data[GAME])
+    .attr("y", -5.5)
+    .attr("x", 22)
     .attr("fill-opacity", 0);
+  label.append("tspan").text((d) => d.data["key"] || d.data[GAME]);
+  label
+    .append("tspan")
+    .attr("font-weight", 400)
+    .attr("dy", "1.15em")
+    .attr("x", 22)
+    .text((d) => `$${d.value.toFixed(2)}m`);
   // transition
   label
     .filter((d) => d.parent === cPack)
@@ -155,21 +164,8 @@ let updateChart = () => {
   // ********************************************************************* //
   const node = nodeUpdate
     .merge(nodeEnter)
-    .on("mouseover", function (d) {
-      const filtered = node.filter((e) => e !== d && e.parent === d.parent);
-      filtered.select("circle").transition(250).attr("fill-opacity", 0.2);
-      filtered
-        .select("circle.nucleus")
-        .transition(250)
-        .attr("fill-opacity", 0.2);
-      filtered.select("text").transition(250).attr("fill-opacity", 0.2);
-    })
-    .on("mouseout", (d) => {
-      const filtered = node.filter((e) => e !== d && e.parent === d.parent);
-      filtered.select("circle").transition(250).attr("fill-opacity", 0.5);
-      filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 1);
-      filtered.select("text").transition(250).attr("fill-opacity", 1);
-    })
+    .on("mouseover", onMouseOver)
+    .on("mouseout", onMouseOut)
     .on("click", (d, i) => {
       if (currFocus === d) {
         zoom(d.parent), d3.event.stopPropagation();
@@ -179,6 +175,53 @@ let updateChart = () => {
     });
 
   zoomTo([cPack.x, cPack.y, cPack.r * 2]);
+};
+
+// ********************************************************************* //
+// ************************ MOUSE EVENT HELPERS ************************ //
+// ********************************************************************* //
+let onMouseOver = (d) => {
+  const filtered = svg
+    .selectAll("g")
+    .filter((e) => e.parent === d.parent && e !== d);
+  filtered.select("circle").transition(250).attr("fill-opacity", 0.2);
+  filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 0.2);
+  filtered
+    .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
+    .select("text")
+    .transition(250)
+    .attr("fill-opacity", 0.2);
+  // dim the non-selected games in the sidebar too
+  if (currFocus.depth === 3) {
+    sidebar
+      .select("#details")
+      .selectAll("li")
+      .filter((e) => e.parent === d.parent && e !== d)
+      .transition(250)
+      .style("opacity", 0.2);
+  }
+};
+
+let onMouseOut = (d) => {
+  const filtered = svg
+    .selectAll("g")
+    .filter((e) => e !== d && e.parent === d.parent);
+  filtered.select("circle").transition(250).attr("fill-opacity", 0.5);
+  filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 1);
+  filtered
+    .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
+    .select("text")
+    .transition(250)
+    .attr("fill-opacity", 1);
+  // return the dimmed games in the sidebar to normal
+  if (currFocus.depth === 3) {
+    sidebar
+      .select("#details")
+      .selectAll("li")
+      .filter((e) => e.parent === d.parent && e !== d)
+      .transition(250)
+      .style("opacity", 1);
+  }
 };
 
 // ********************************************************************* //
@@ -223,7 +266,13 @@ let animate = () => {
   node
     .select("text")
     .transition(zoomDuration)
-    .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+    .attr("fill-opacity", (d) =>
+      d.parent === currFocus &&
+      // if is a game, display text for only top 5
+      (d.rank == null || (d.rank != null && d.rank <= 5))
+        ? 1
+        : 0
+    );
 };
 
 let zoomTo = (v) => {
@@ -243,8 +292,67 @@ let zoomTo = (v) => {
 };
 
 let zoom = (d) => {
+  if (d === currFocus || !d) return;
   // change focus to new node
   currFocus = d;
+
+  if (currFocus.depth === 3) {
+    // display game details at game level
+    sidebar.select("#orderer").style("display", "none");
+    const details = sidebar
+      .select("#details")
+      .style("display", "inline")
+      .style("color", circleColors[4]);
+    details.selectAll("*").remove();
+
+    let exampleGame = currFocus.children[0].data;
+    // create list and add title
+    let list = details
+      .append("ul")
+      .text(
+        `Full list of all games for ${exampleGame[layers[0]]}, ${
+          exampleGame[layers[1]]
+        }, ${exampleGame[layers[2]]}`
+      );
+    // add subtitle text
+    list
+      .append("div")
+      .style("font-weight", 400)
+      .style("font-size", "0.75rem")
+      .style("opacity", 0.75)
+      .text("(Ranked by game sales)");
+    // list out game items
+    const gameItems = list
+      .selectAll("li")
+      .data(currFocus.children)
+      .enter()
+      .append("li")
+      .style("list-style", "none")
+      .style("font-size", "0.75rem")
+      .style("margin-top", "0.5rem")
+      .text((d) => d.data[GAME])
+      .on("mouseover", onMouseOver)
+      .on("mouseout", onMouseOut);
+
+    gameItems
+      .append("div")
+      .style("font-weight", 400)
+      .text((d) => `$${d.data[SALES]}m`);
+
+    currFocus.children // also lazy ranking the games in its final nested category
+      .map((d, i) => {
+        d.rank = i + 1;
+        return d;
+      });
+  } else if (currFocus.depth === 0) {
+    // orderer appears
+    sidebar.select("#orderer").style("display", "inline");
+    sidebar.select("#details").style("display", "none");
+  } else {
+    // hide both at mid levels
+    sidebar.select("#orderer").style("display", "none");
+    sidebar.select("#details").style("display", "none");
+  }
 
   // zoom
   const transition = svg
@@ -259,8 +367,6 @@ let zoom = (d) => {
       ]);
       return (t) => zoomTo(i(t));
     });
-
-  // display game details at game level
 
   animate();
 };

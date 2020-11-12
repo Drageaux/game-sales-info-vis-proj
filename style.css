@@ -1,3 +1,8 @@
+#content {
+  background: hsl(224, 56%, 16%);
+  color: white;
+}
+
 #svg circle:hover {
   stroke-width: 4px;
 }
@@ -9,4 +14,8 @@
 #svg g text {
   pointer-events: none;
   font: 700 24px "Open Sans", sans-serif;
+}
+
+#details ul {
+  font: 700 1rem "Open Sans", sans-serif;
 }
