@@ -192,7 +192,7 @@ let onMouseOver = (d) => {
     .transition(250)
     .attr("fill-opacity", 0.2);
   // dim the non-selected games in the sidebar too
-  if (d.depth === 3) {
+  if (currFocus.depth === 3) {
     sidebar
       .select("#details")
       .selectAll("li")
@@ -214,7 +214,7 @@ let onMouseOut = (d) => {
     .transition(250)
     .attr("fill-opacity", 1);
   // return the dimmed games in the sidebar to normal
-  if (d.depth === 3) {
+  if (currFocus.depth === 3) {
     sidebar
       .select("#details")
       .selectAll("li")
