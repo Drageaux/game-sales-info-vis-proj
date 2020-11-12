@@ -116,17 +116,14 @@ let updateChart = () => {
     (d) => d[layers[2]]
   );
 
-  let root = new Map();
-  root.set(layers[0], dataByRegion);
-  console.log(root);
-  let cPack = pack(root);
+  let cPack = pack(dataByRegion);
   currFocus = cPack;
 
   svg.on("click", () => zoom(cPack));
 
   const nodeUpdate = svg
     .selectAll("g")
-    .data(cPack.descendants(), (d) => d.data["key"] | d.data[GAME])
+    .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
     .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
 
   const nodeEnter = nodeUpdate
@@ -175,8 +172,7 @@ let updateChart = () => {
     .attr("x", 22)
     .attr("fill-opacity", 0);
   label.append("tspan").text((d) => {
-    console.log(d);
-    d.key() || d.data[GAME];
+    return d.data[0] || d.data[GAME];
   });
   label
     .append("tspan")
@@ -199,11 +195,11 @@ let updateChart = () => {
     .merge(nodeEnter)
     .on("mouseover", onMouseOver)
     .on("mouseout", onMouseOut)
-    .on("click", (d, i) => {
+    .on("click", (event, d, i) => {
       if (currFocus === d) {
-        zoom(d.parent), d3.event.stopPropagation();
+        zoom(d.parent), event.stopPropagation();
       } else {
-        zoom(d), d3.event.stopPropagation();
+        zoom(d), event.stopPropagation();
       }
     });
 
