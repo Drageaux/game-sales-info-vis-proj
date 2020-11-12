@@ -29,6 +29,7 @@ let view;
 let zoomDuration = 750;
 
 let sliderRange;
+let yearRange = [];
 
 const sidebar = d3.select("#sidebar");
 
@@ -41,6 +42,7 @@ const svg = d3
 d3.csv("./circle_pack.csv").then((data) => {
   games = data.filter((game) => game[YEAR] != -1);
   const years = games.map((d) => +d[YEAR]);
+  yearRange = [2001, d3.max(years)];
   sliderRange = d3
     .sliderBottom()
     .min(d3.min(years))
@@ -48,18 +50,19 @@ d3.csv("./circle_pack.csv").then((data) => {
     .width(width * 0.8)
     .ticks(5)
     .step(1)
-    .default([2001, d3.max(years)])
+    .default(yearRange)
     .fill("#2196f3")
-    .on("start", (d) => console.log(d))
     .on("onchange", (val) => {
       console.log(val);
+      yearRange = val;
+      updateChart();
       d3.select("p#value-range").text(val.map(d3.format(".0")).join("-"));
     });
 
   let gRange = d3
     .select("#slider-range")
     .append("svg")
-    .attr("width", 500)
+    .attr("width", width)
     .attr("height", 100)
     .append("g")
     .attr("transform", "translate(30,30)");
@@ -107,8 +110,10 @@ let shuffleArray = () => {
 };
 
 let updateChart = () => {
-  let filteredGames = games.filter((e) => e[SALES] > 0.0 && +e[YEAR] == 2001);
-  // TODO: add ranking and only display high ranked games
+  let filteredGames = games.filter(
+    (e) => e[SALES] > 1 && +e[YEAR] >= yearRange[0] && +e[YEAR] <= yearRange[1]
+  );
+  console.log(filteredGames.length, yearRange[0], yearRange[1]);
   let dataByRegion = d3.group(
     filteredGames,
     (d) => d[layers[0]],
@@ -275,6 +280,7 @@ let animate = () => {
   node
     .select("circle")
     .transition(zoomDuration)
+    .attr("r", (d) => d.r)
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
     // make the outer circle display properly
@@ -373,7 +379,7 @@ let zoom = (d) => {
         d.rank = i + 1;
         return d;
       });
-  } else if (currFocus.depth === 1) {
+  } else if (currFocus.depth === 0) {
     // orderer appears
     sidebar.select("#orderer").style("display", "inline");
     sidebar.select("#details").style("display", "none");
