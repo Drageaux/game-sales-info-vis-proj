@@ -291,7 +291,7 @@ let zoom = (d) => {
   // change focus to new node
   currFocus = d;
 
-  if (currFocus && currFocus.depth === 3) {
+  if (currFocus.depth === 3) {
     // display game details at game level
     sidebar.select("#orderer").style("display", "none");
     const details = sidebar
@@ -339,7 +339,7 @@ let zoom = (d) => {
         d.rank = i + 1;
         return d;
       });
-  } else if (currFocus && currFocus.depth === 0) {
+  } else if (currFocus.depth === 0) {
     // orderer appears
     sidebar.select("#orderer").style("display", "inline");
     sidebar.select("#details").style("display", "none");
