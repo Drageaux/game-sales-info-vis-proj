@@ -162,13 +162,21 @@ let updateChart = () => {
         .select("circle.nucleus")
         .transition(250)
         .attr("fill-opacity", 0.2);
-      filtered.select("text").transition(250).attr("fill-opacity", 0.2);
+      filtered
+        .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
+        .select("text")
+        .transition(250)
+        .attr("fill-opacity", 0.2);
     })
     .on("mouseout", (d) => {
       const filtered = node.filter((e) => e !== d && e.parent === d.parent);
       filtered.select("circle").transition(250).attr("fill-opacity", 0.5);
       filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 1);
-      filtered.select("text").transition(250).attr("fill-opacity", 1);
+      filtered
+        .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
+        .select("text")
+        .transition(250)
+        .attr("fill-opacity", 1);
     })
     .on("click", (d, i) => {
       if (currFocus === d) {
@@ -223,7 +231,13 @@ let animate = () => {
   node
     .select("text")
     .transition(zoomDuration)
-    .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
+    .attr("fill-opacity", (d) =>
+      d.parent === currFocus &&
+      // if is a game, display text for only top 5
+      (d.rank == null || (d.rank != null && d.rank <= 5))
+        ? 1
+        : 0
+    );
 };
 
 let zoomTo = (v) => {
@@ -246,6 +260,15 @@ let zoom = (d) => {
   // change focus to new node
   currFocus = d;
 
+  // display game details at game level
+  if (currFocus.depth === 3) {
+    // lazy ranking the games in its final nested category
+    currFocus.children.map((d, i) => {
+      d.rank = i + 1;
+      return d;
+    });
+  }
+
   // zoom
   const transition = svg
     .transition()
@@ -259,8 +282,6 @@ let zoom = (d) => {
       ]);
       return (t) => zoomTo(i(t));
     });
-
-  // display game details at game level
 
   animate();
 };
