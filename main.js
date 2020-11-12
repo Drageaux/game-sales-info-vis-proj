@@ -28,6 +28,8 @@ let currFocus;
 let view;
 let zoomDuration = 750;
 
+let sliderRange;
+
 const sidebar = d3.select("#sidebar");
 
 const svg = d3
@@ -37,7 +39,36 @@ const svg = d3
   .style("cursor", "pointer");
 
 d3.csv("./circle_pack.csv").then((data) => {
-  games = data;
+  games = data.filter((game) => game[YEAR] != -1);
+  const years = games.map((d) => +d[YEAR]);
+  sliderRange = d3
+    .sliderBottom()
+    .min(d3.min(years))
+    .max(d3.max(years))
+    .width(width * 0.8)
+    .ticks(5)
+    .step(1)
+    .default([2001, d3.max(years)])
+    .fill("#2196f3")
+    .on("start", (d) => console.log(d))
+    .on("onchange", (val) => {
+      console.log(val);
+      d3.select("p#value-range").text(val.map(d3.format(".0")).join("-"));
+    });
+
+  let gRange = d3
+    .select("#slider-range")
+    .append("svg")
+    .attr("width", 500)
+    .attr("height", 100)
+    .append("g")
+    .attr("transform", "translate(30,30)");
+  // d3.select("p#value-range").text(
+  //   sliderRange.value().map(d3.format(".3")).join("-")
+  // );
+
+  gRange.call(sliderRange);
+
   updateChart();
 });
 
@@ -78,17 +109,16 @@ let shuffleArray = () => {
 let updateChart = () => {
   let filteredGames = games.filter((e) => e[SALES] > 0.0 && +e[YEAR] == 2001);
   // TODO: add ranking and only display high ranked games
-  let dataByRegion = d3
-    .nest()
-    .key((d) => d[layers[0]])
-    .key((d) => d[layers[1]])
-    .key((d) => d[layers[2]])
-    .entries(filteredGames);
+  let dataByRegion = d3.group(
+    filteredGames,
+    (d) => d[layers[0]],
+    (d) => d[layers[1]],
+    (d) => d[layers[2]]
+  );
 
-  let root = {
-    key: layers[0],
-    values: dataByRegion,
-  };
+  let root = new Map();
+  root.set(layers[0], dataByRegion);
+  console.log(root);
   let cPack = pack(root);
   currFocus = cPack;
 
@@ -144,7 +174,10 @@ let updateChart = () => {
     .attr("y", -5.5)
     .attr("x", 22)
     .attr("fill-opacity", 0);
-  label.append("tspan").text((d) => d.data["key"] || d.data[GAME]);
+  label.append("tspan").text((d) => {
+    console.log(d);
+    d.key() || d.data[GAME];
+  });
   label
     .append("tspan")
     .attr("font-weight", 400)
@@ -344,7 +377,7 @@ let zoom = (d) => {
         d.rank = i + 1;
         return d;
       });
-  } else if (currFocus.depth === 0) {
+  } else if (currFocus.depth === 1) {
     // orderer appears
     sidebar.select("#orderer").style("display", "inline");
     sidebar.select("#details").style("display", "none");
@@ -373,16 +406,15 @@ let zoom = (d) => {
 
 // circle packing function
 let pack = (data) => {
-  return d3
+  let result = d3
     .pack()
     .size([width - 2, height - 2])
     .padding(3)(
     d3
-      .hierarchy(data, (d) => {
-        // change children accessor
-        return d["values"];
-      })
+      .hierarchy(data)
       .sum((d) => d[SALES])
       .sort((a, b) => b[SALES] - a[SALES])
   );
+  console.log(result);
+  return result;
 };
