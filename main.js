@@ -142,8 +142,10 @@ let updateChart = () => {
     .append("text")
     .attr("fill", (d) => circleColors[d.depth])
     .attr("dx", 22)
+    .attr("dy", 0)
+    .attr("fill-opacity", 0)
     .text((d) => d.data["key"] || d.data[GAME])
-    .attr("fill-opacity", 0);
+    .call(wrap, 40);
   // transition
   label
     .filter((d) => d.parent === cPack)
@@ -185,7 +187,7 @@ let onMouseOver = (d) => {
     .transition(250)
     .attr("fill-opacity", 0.2);
   // dim the non-selected games in the sidebar too
-  if (currFocus.depth === 3) {
+  if (d.depth === 3) {
     sidebar
       .select("#details")
       .selectAll("li")
@@ -207,7 +209,7 @@ let onMouseOut = (d) => {
     .transition(250)
     .attr("fill-opacity", 1);
   // return the dimmed games in the sidebar to normal
-  if (currFocus.depth === 3) {
+  if (d.depth === 3) {
     sidebar
       .select("#details")
       .selectAll("li")
@@ -285,10 +287,11 @@ let zoomTo = (v) => {
 };
 
 let zoom = (d) => {
+  if (d === currFocus || !d) return;
   // change focus to new node
   currFocus = d;
 
-  if (currFocus.depth === 3) {
+  if (currFocus && currFocus.depth === 3) {
     // display game details at game level
     sidebar.select("#orderer").style("display", "none");
     const details = sidebar
@@ -336,7 +339,7 @@ let zoom = (d) => {
         d.rank = i + 1;
         return d;
       });
-  } else if (currFocus.depth === 0) {
+  } else if (currFocus && currFocus.depth === 0) {
     // orderer appears
     sidebar.select("#orderer").style("display", "inline");
     sidebar.select("#details").style("display", "none");
@@ -378,3 +381,38 @@ let pack = (data) => {
       .sort((a, b) => b[SALES] - a[SALES])
   );
 };
+
+function wrap(text, width) {
+  text.each(function () {
+    var text = d3.select(this),
+      words = text.text().split(/\s+/).reverse(),
+      word,
+      line = [],
+      lineNumber = 0, //<-- 0!
+      lineHeight = 1.2, // ems
+      x = text.attr("x"), //<-- include the x!
+      y = text.attr("y"),
+      dy = text.attr("dy") || 0; //<-- null check
+    tspan = text
+      .text(null)
+      .append("tspan")
+      .attr("x", x)
+      .attr("y", y)
+      .attr("dy", dy + "em");
+    while ((word = words.pop())) {
+      line.push(word);
+      tspan.text(line.join(" "));
+      if (tspan.node().getComputedTextLength() > width) {
+        line.pop();
+        tspan.text(line.join(" "));
+        line = [word];
+        tspan = text
+          .append("tspan")
+          .attr("x", x)
+          .attr("y", y)
+          .attr("dy", ++lineNumber * lineHeight + dy + "em")
+          .text(word);
+      }
+    }
+  });
+}
