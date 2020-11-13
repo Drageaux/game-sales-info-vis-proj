@@ -28,18 +28,86 @@ let currFocus;
 let view;
 let zoomDuration = 750;
 
+let sliderRange;
+let currYear = 2001;
+
 const sidebar = d3.select("#sidebar");
 
 const svg = d3
   .select("svg")
-  .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
+  .attr(
+    "viewBox",
+    `-${width / 2 + 50} -${height / 2 + 50} ${width + 100} ${height + 100}`
+  )
   .style("background", color(0))
   .style("cursor", "pointer");
 
+let timer;
 d3.csv("./circle_pack.csv").then((data) => {
-  games = data;
+  games = data.filter((game) => game[YEAR] != -1);
+  const years = games.map((d) => +d[YEAR]);
+  sliderRange = d3
+    .sliderBottom()
+    .min(d3.min(years))
+    .max(d3.max(years))
+    .width(width * 0.8)
+    .ticks(5)
+    .step(1)
+    .default(currYear)
+    .fill("white")
+    .on("onchange", (val) => {
+      currYear = val;
+      // IMPORTANT: delay before updating the entire chart with new data
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        updateChart();
+      }, 750);
+      d3.select("p#value-simple").text(d3.format(".0")(val));
+    });
+
+  let gRange = d3
+    .select("#slider-range")
+    .append("svg")
+    .attr(
+      "width",
+      d3.select("#slider").select("div").node().getBoundingClientRect().width *
+        0.9
+    )
+    .attr("height", 100)
+    .append("g")
+    .attr(
+      "transform",
+      `translate(${
+        d3.select("#slider").select("div").node().getBoundingClientRect()
+          .width * 0.1
+      },30)`
+    );
+  d3.select("p#value-range").text(d3.format(".0")(sliderRange.value()));
+
+  gRange.call(sliderRange);
+
   updateChart();
 });
+
+window.onresize = () => {
+  let gRange = d3
+    .select("#slider-range")
+    .select("svg")
+    .attr(
+      "width",
+      d3.select("#slider").select("div").node().getBoundingClientRect().width *
+        0.9
+    )
+    .attr("height", 100)
+    .select("g")
+    .attr(
+      "transform",
+      `translate(${
+        d3.select("#slider").select("div").node().getBoundingClientRect()
+          .width * 0.1
+      },30)`
+    );
+};
 
 let layers = [REGION, GENRE, PLATFORM];
 let shuffleArray = () => {
@@ -76,120 +144,171 @@ let shuffleArray = () => {
 };
 
 let updateChart = () => {
-  let filteredGames = games.filter((e) => e[SALES] > 0.0 && +e[YEAR] == 2001);
-  // TODO: add ranking and only display high ranked games
-  let dataByRegion = d3
-    .nest()
-    .key((d) => d[layers[0]])
-    .key((d) => d[layers[1]])
-    .key((d) => d[layers[2]])
-    .entries(filteredGames);
+  let filteredGames = games.filter((e) => e[SALES] > 0 && +e[YEAR] == currYear);
+  let groupedData = d3.group(
+    filteredGames,
+    (d) => d[layers[0]],
+    (d) => d[layers[1]],
+    (d) => d[layers[2]]
+  );
+  if (groupedData.size === 0) return;
 
-  let root = {
-    key: layers[0],
-    values: dataByRegion,
-  };
-  let cPack = pack(root);
-  currFocus = cPack;
+  let cPack = pack(groupedData);
+  if (!currFocus) currFocus = cPack;
 
   svg.on("click", () => zoom(cPack));
 
-  const nodeUpdate = svg
+  const nodeJoin = svg
     .selectAll("g")
-    .data(cPack.descendants(), (d) => d.data["key"] | d.data[GAME])
-    .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
+    .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
+    // .filter(function (d) {
+    //   return d.depth - 1 === currFocus.depth;
+    // })
+    .join(
+      (group) => {
+        let enter = group
+          .append("g")
+          .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
+          // create circles
+          .call((enter) =>
+            enter
+              .append("circle")
+              .attr("fill", (d) => circleColors[d.depth])
+              .attr("fill-opacity", 0)
+              .attr("stroke", (d) => circleColors[d.depth])
+              .attr("stroke-width", "1px")
+              .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
+              .attr("depth", (d) => d.depth)
+          )
+          // create nucleus
+          .call((enter) =>
+            enter
+              .append("circle")
+              .attr("class", "nucleus")
+              .attr("fill", (d) => circleColors[d.depth])
+              .attr("fill-opacity", 0)
+              .attr("depth", (d) => d.depth)
+              .attr("pointer-events", "none")
+              .attr("r", 15)
+          )
+          // create label
+          .call((enter) =>
+            enter
+              .append("text")
+              .attr("fill", (d) => circleColors[d.depth])
+              .attr("y", -5.5)
+              .attr("x", 22)
+              .attr("fill-opacity", 0)
+          )
+          // transition children in
+          .call((enter) => {
+            let currentNodes = enter.filter((d) => d.parent === currFocus);
+            fadeSelectedNodesContentIn(currentNodes);
+            // updateText();
+            return enter;
+          });
+        return enter;
+      },
+      (update) => {
+        // because the data had been updated, === comparisons can't work
+        let currentNodes = update.filter(
+          (d) =>
+            !d.parent || (d.parent && d.parent.data.key === currFocus.data.key)
+        );
+        fadeSelectedNodesContentIn(currentNodes);
 
-  const nodeEnter = nodeUpdate
-    .enter()
-    .append("g")
-    .style("display", (d) => (d.parent === cPack ? "inline" : "none"));
+        return update;
+      },
+      (exit) => {
+        // TODO: remove
+        return exit
+          .filter(function (d) {
+            return this.style.display === "inline";
+          })
+          .remove();
+        // console.log("exit", exit.nodes());
+        // return exit.remove();
+      }
+    );
 
-  // create circle
-  const circle = nodeEnter
-    .append("circle")
-    .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", 0)
-    .attr("stroke", (d) => circleColors[d.depth])
-    .attr("stroke-width", "1px")
-    .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
-    .attr("depth", (d) => d.depth);
-  // transition in
-  circle
-    .filter((d) => d.parent === cPack)
-    .transition(750)
-    .delay(1000)
+  updateText();
+
+  // ********************************************************************* //
+  // **************************** MOUSE EVENTS *************************** //
+  // ********************************************************************* //
+  nodeJoin
+    .on("mouseover", onMouseOver)
+    .on("mouseout", onMouseOut)
+    .on("click", (event, d, i) => {
+      if (currFocus === d) {
+        zoom(d.parent), event.stopPropagation();
+      } else {
+        zoom(d), event.stopPropagation();
+      }
+    });
+
+  zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
+};
+
+let fadeSelectedNodesContentIn = (selectedNodes) => {
+  selectedNodes
+    .select("circle")
+    .transition()
+    .duration(750)
     .attr("r", (d) => d.r)
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0));
+    .attr("fill-opacity", 0.5);
 
-  // create nucleus
-  const nucleus = nodeEnter
-    .append("circle")
-    .attr("class", "nucleus")
-    .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", 0)
-    .attr("depth", (d) => d.depth)
-    .attr("pointer-events", "none")
-    .attr("r", 15);
-  // transition in
-  nucleus
-    .filter((d) => d.parent === cPack)
-    .transition(750)
-    .delay(1000)
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
+  selectedNodes
+    .select("circle.nucleus")
+    .transition()
+    .duration(750)
+    .attr("fill-opacity", 1);
 
-  // create label
-  const label = nodeEnter
-    .append("text")
-    .attr("fill", (d) => circleColors[d.depth])
-    .attr("y", -5.5)
-    .attr("x", 22)
-    .attr("fill-opacity", 0);
-  label.append("tspan").text((d) => d.data["key"] || d.data[GAME]);
+  selectedNodes
+    .select("text")
+    .transition()
+    .duration(750)
+    .attr("fill-opacity", 1);
+};
+
+let updateText = () => {
+  const label = svg.selectAll("g").select("text");
+  label.selectAll("tspan").remove();
+  label.append("tspan").text((d) => {
+    return d.data[0] || d.data[GAME];
+  });
   label
     .append("tspan")
     .attr("font-weight", 400)
     .attr("dy", "1.15em")
     .attr("x", 22)
     .text((d) => `$${d.value.toFixed(2)}m`);
-  // transition
-  label
-    .filter((d) => d.parent === cPack)
-    .transition(750)
-    .delay(1000)
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
+
   label.on("mousedown", () => false);
-
-  // ********************************************************************* //
-  // **************************** MOUSE EVENTS *************************** //
-  // ********************************************************************* //
-  const node = nodeUpdate
-    .merge(nodeEnter)
-    .on("mouseover", onMouseOver)
-    .on("mouseout", onMouseOut)
-    .on("click", (d, i) => {
-      if (currFocus === d) {
-        zoom(d.parent), d3.event.stopPropagation();
-      } else {
-        zoom(d), d3.event.stopPropagation();
-      }
-    });
-
-  zoomTo([cPack.x, cPack.y, cPack.r * 2]);
 };
 
 // ********************************************************************* //
 // ************************ MOUSE EVENT HELPERS ************************ //
 // ********************************************************************* //
-let onMouseOver = (d) => {
+let onMouseOver = (event, d) => {
   const filtered = svg
     .selectAll("g")
     .filter((e) => e.parent === d.parent && e !== d);
-  filtered.select("circle").transition(250).attr("fill-opacity", 0.2);
-  filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 0.2);
+  filtered
+    .select("circle")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 0.2);
+  filtered
+    .select("circle.nucleus")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 0.2);
   filtered
     .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
     .select("text")
-    .transition(250)
+    .transition()
+    .duration(250)
     .attr("fill-opacity", 0.2);
   // dim the non-selected games in the sidebar too
   if (currFocus.depth === 3) {
@@ -197,21 +316,31 @@ let onMouseOver = (d) => {
       .select("#details")
       .selectAll("li")
       .filter((e) => e.parent === d.parent && e !== d)
-      .transition(250)
+      .transition()
+      .duration(250)
       .style("opacity", 0.2);
   }
 };
 
-let onMouseOut = (d) => {
+let onMouseOut = (event, d) => {
   const filtered = svg
     .selectAll("g")
     .filter((e) => e !== d && e.parent === d.parent);
-  filtered.select("circle").transition(250).attr("fill-opacity", 0.5);
-  filtered.select("circle.nucleus").transition(250).attr("fill-opacity", 1);
+  filtered
+    .select("circle")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 0.5);
+  filtered
+    .select("circle.nucleus")
+    .transition()
+    .duration(250)
+    .attr("fill-opacity", 1);
   filtered
     .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
     .select("text")
-    .transition(250)
+    .transition()
+    .duration(250)
     .attr("fill-opacity", 1);
   // return the dimmed games in the sidebar to normal
   if (currFocus.depth === 3) {
@@ -227,11 +356,15 @@ let onMouseOut = (d) => {
 // ********************************************************************* //
 // ***************************** FUNCTIONS ***************************** //
 // ********************************************************************* //
-let animate = () => {
+let changeLayers = () => {
   // update animation
-  const node = svg
-    .selectAll("g")
-    .transition(zoomDuration)
+  const node = svg.selectAll("g");
+
+  // hide  nodes except current
+
+  node
+    .transition()
+    .duration(zoomDuration)
     .on("start", function (d) {
       if (d === currFocus || d.parent === currFocus)
         this.style.display = "inline";
@@ -245,10 +378,11 @@ let animate = () => {
 
   node
     .select("circle")
-    .transition(zoomDuration)
+    .transition()
+    .duration(zoomDuration)
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
-    // make the outer circle display properly
+    // make the outer circle hide properly
     .on("start", function (d) {
       if (d === currFocus || d.parent === currFocus)
         this.style.display = "inline";
@@ -260,12 +394,14 @@ let animate = () => {
 
   node
     .select("circle.nucleus")
-    .transition(zoomDuration)
+    .transition()
+    .duration(zoomDuration)
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 1 : 0));
 
   node
     .select("text")
-    .transition(zoomDuration)
+    .transition()
+    .duration(zoomDuration)
     .attr("fill-opacity", (d) =>
       d.parent === currFocus &&
       // if is a game, display text for only top 5
@@ -289,15 +425,27 @@ let zoomTo = (v) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
     });
   node.select("circle").attr("r", (d) => d.r * k);
+  // const label = node.select("text");
+  // label.selectAll("tspan").remove();
+  // label.append("tspan").text((d) => {
+  //   return d.data[0] || d.data[GAME];
+  // });
+  // label
+  //   .append("tspan")
+  //   .attr("font-weight", 400)
+  //   .attr("dy", "1.15em")
+  //   .attr("x", 22)
+  //   .text((d) => `$${d.value.toFixed(2)}m`);
 };
 
 let zoom = (d) => {
-  if (d === currFocus || !d) return;
+  if (!d) return;
   // change focus to new node
   currFocus = d;
 
   if (currFocus.depth === 3) {
     // display game details at game level
+    svg.select("#slider").style("display", "none");
     sidebar.select("#orderer").style("display", "none");
     const details = sidebar
       .select("#details")
@@ -345,11 +493,14 @@ let zoom = (d) => {
         return d;
       });
   } else if (currFocus.depth === 0) {
+    // slider appears
+    d3.select("#slider").style("display", "inline");
     // orderer appears
     sidebar.select("#orderer").style("display", "inline");
     sidebar.select("#details").style("display", "none");
   } else {
     // hide both at mid levels
+    d3.select("#slider").style("display", "none");
     sidebar.select("#orderer").style("display", "none");
     sidebar.select("#details").style("display", "none");
   }
@@ -365,24 +516,23 @@ let zoom = (d) => {
         currFocus.y,
         currFocus.r * 2,
       ]);
+      console.log(view);
       return (t) => zoomTo(i(t));
     });
 
-  animate();
+  changeLayers();
 };
 
 // circle packing function
 let pack = (data) => {
-  return d3
+  let result = d3
     .pack()
     .size([width - 2, height - 2])
     .padding(3)(
     d3
-      .hierarchy(data, (d) => {
-        // change children accessor
-        return d["values"];
-      })
+      .hierarchy(data)
       .sum((d) => d[SALES])
       .sort((a, b) => b[SALES] - a[SALES])
   );
+  return result;
 };

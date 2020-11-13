@@ -11,7 +11,7 @@ body {
 
 #content {
   color: white;
-  max-width: 100vmin;
+  max-width: 110vmin;
 }
 
 #svg circle:hover {
@@ -29,4 +29,8 @@ body {
 
 #details ul {
   font: 700 1rem "Open Sans", sans-serif;
+}
+
+#slider {
+  color: white;
 }
