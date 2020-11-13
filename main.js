@@ -39,6 +39,7 @@ const svg = d3
   .style("background", color(0))
   .style("cursor", "pointer");
 
+let timer;
 d3.csv("./circle_pack.csv").then((data) => {
   games = data.filter((game) => game[YEAR] != -1);
   const years = games.map((d) => +d[YEAR]);
@@ -53,14 +54,22 @@ d3.csv("./circle_pack.csv").then((data) => {
     .fill("white")
     .on("onchange", (val) => {
       currYear = val;
-      initChart();
+
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        initChart();
+      }, 750);
+
       d3.select("p#value-simple").text(d3.format(".0")(val));
     });
 
   let gRange = d3
     .select("#slider-range")
     .append("svg")
-    .attr("width", width)
+    .attr(
+      "width",
+      d3.select("#slider").select("div").node().getBoundingClientRect().width
+    )
     .attr("height", 100)
     .append("g")
     .attr("transform", "translate(30,30)");
@@ -115,7 +124,6 @@ let initChart = () => {
     (d) => d[layers[1]],
     (d) => d[layers[2]]
   );
-  console.log(groupedData);
 
   let cPack = pack(groupedData);
   if (!cPack.children) return;
@@ -125,7 +133,10 @@ let initChart = () => {
 
   const nodeJoin = svg
     .selectAll("g")
-    .data(cPack.descendants().slice(1), (d) => d.data[0] || d.data[GAME])
+    .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
+    // .filter(function (d) {
+    //   return d.depth - 1 === currFocus.depth;
+    // })
     .join(
       (group) => {
         let enter = group
@@ -188,8 +199,50 @@ let initChart = () => {
           });
         return enter;
       },
-      (update) => update,
-      (exit) => exit.remove()
+      (update) => {
+        // because the data had been updated, === comparisons can't work
+        update
+          .select("circle")
+          .transition()
+          .duration(zoomDuration)
+          .attr("r", (d) => {
+            return !d.parent ||
+              (d.parent && d.parent.data.key === currFocus.data.key)
+              ? d.r
+              : 0;
+          })
+          .attr("fill-opacity", (d) =>
+            !d.parent || (d.parent && d.parent.data.key === currFocus.data.key)
+              ? 0.5
+              : 0
+          )
+          .on("start", (d) => {
+            // zoom
+            const transition = svg
+              .transition()
+              .duration(zoomDuration)
+              .tween("zoom", () => {
+                // view is the starting point, current focus is the next point
+                const i = d3.interpolateZoom(
+                  view ? view : [currFocus.x, currFocus.y, currFocus.r * 2],
+                  [currFocus.x, currFocus.y, currFocus.r * 2]
+                );
+                return (t) => zoomTo(i(t));
+              });
+          });
+
+        return update;
+      },
+      (exit) => {
+        // TODO: remove
+        return exit
+          .filter(function (d) {
+            return this.style.display === "inline";
+          })
+          .remove();
+        // console.log("exit", exit.nodes());
+        // return exit.remove();
+      }
     )
     .call((g) => {
       const label = g.select("text");
@@ -362,17 +415,17 @@ let zoomTo = (v) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
     });
   node.select("circle").attr("r", (d) => d.r * k);
-  const label = node.select("text");
-  label.selectAll("tspan").remove();
-  label.append("tspan").text((d) => {
-    return d.data[0] || d.data[GAME];
-  });
-  label
-    .append("tspan")
-    .attr("font-weight", 400)
-    .attr("dy", "1.15em")
-    .attr("x", 22)
-    .text((d) => `$${d.value.toFixed(2)}m`);
+  // const label = node.select("text");
+  // label.selectAll("tspan").remove();
+  // label.append("tspan").text((d) => {
+  //   return d.data[0] || d.data[GAME];
+  // });
+  // label
+  //   .append("tspan")
+  //   .attr("font-weight", 400)
+  //   .attr("dy", "1.15em")
+  //   .attr("x", 22)
+  //   .text((d) => `$${d.value.toFixed(2)}m`);
 };
 
 let zoom = (d) => {
@@ -453,6 +506,7 @@ let zoom = (d) => {
         currFocus.y,
         currFocus.r * 2,
       ]);
+      console.log(view);
       return (t) => zoomTo(i(t));
     });
 
