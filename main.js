@@ -112,7 +112,6 @@ let initChart = () => {
   let filteredGames = games.filter(
     (e) => e[SALES] > 1 && +e[YEAR] >= yearRange[0] && +e[YEAR] <= yearRange[1]
   );
-  // console.log(filteredGames.length, yearRange[0], yearRange[1]);
   let dataByRegion = d3.group(
     filteredGames,
     (d) => d[layers[0]],
@@ -125,19 +124,6 @@ let initChart = () => {
   if (!currFocus) currFocus = cPack;
 
   svg.on("click", () => zoom(cPack));
-
-  const nodeUpdate = svg
-    .selectAll("g")
-    .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME]);
-
-  // const nodeEnter = nodeUpdate
-  //   .enter()
-  //   .append("g")
-  //   .style("display", (d) => (d.parent === cPack ? "inline" : "none"));
-  // // .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
-
-  // const nodeExit = svg.selectAll("g").exit().remove();
-  // // console.log(nodeExit);
 
   const nodeJoin = svg
     .selectAll("g")
