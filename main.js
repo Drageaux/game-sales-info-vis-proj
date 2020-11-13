@@ -226,8 +226,6 @@ let updateChart = () => {
             return this.style.display === "inline";
           })
           .remove();
-        // console.log("exit", exit.nodes());
-        // return exit.remove();
       }
     );
 
@@ -242,6 +240,8 @@ let updateChart = () => {
     .on("click", (event, d, i) => {
       if (currFocus === d) {
         zoom(d.parent), event.stopPropagation();
+      } else if (d.depth > 3) {
+        event.stopPropagation();
       } else {
         zoom(d), event.stopPropagation();
       }
