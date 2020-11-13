@@ -35,7 +35,10 @@ const sidebar = d3.select("#sidebar");
 
 const svg = d3
   .select("svg")
-  .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
+  .attr(
+    "viewBox",
+    `-${width / 2 + 50} -${height / 2 + 50} ${width + 100} ${height + 100}`
+  )
   .style("background", color(0))
   .style("cursor", "pointer");
 
@@ -54,12 +57,11 @@ d3.csv("./circle_pack.csv").then((data) => {
     .fill("white")
     .on("onchange", (val) => {
       currYear = val;
-
+      // IMPORTANT: delay before updating the entire chart with new data
       clearTimeout(timer);
       timer = setTimeout(() => {
-        initChart();
+        updateChart();
       }, 750);
-
       d3.select("p#value-simple").text(d3.format(".0")(val));
     });
 
@@ -68,17 +70,44 @@ d3.csv("./circle_pack.csv").then((data) => {
     .append("svg")
     .attr(
       "width",
-      d3.select("#slider").select("div").node().getBoundingClientRect().width
+      d3.select("#slider").select("div").node().getBoundingClientRect().width *
+        0.9
     )
     .attr("height", 100)
     .append("g")
-    .attr("transform", "translate(30,30)");
+    .attr(
+      "transform",
+      `translate(${
+        d3.select("#slider").select("div").node().getBoundingClientRect()
+          .width * 0.1
+      },30)`
+    );
   d3.select("p#value-range").text(d3.format(".0")(sliderRange.value()));
 
   gRange.call(sliderRange);
 
-  initChart();
+  updateChart();
 });
+
+window.onresize = () => {
+  let gRange = d3
+    .select("#slider-range")
+    .select("svg")
+    .attr(
+      "width",
+      d3.select("#slider").select("div").node().getBoundingClientRect().width *
+        0.9
+    )
+    .attr("height", 100)
+    .select("g")
+    .attr(
+      "transform",
+      `translate(${
+        d3.select("#slider").select("div").node().getBoundingClientRect()
+          .width * 0.1
+      },30)`
+    );
+};
 
 let layers = [REGION, GENRE, PLATFORM];
 let shuffleArray = () => {
@@ -111,22 +140,20 @@ let shuffleArray = () => {
     .attr("fill-opacity", 0);
 
   svg.selectAll("g").transition().delay(750).remove();
-  initChart();
+  updateChart();
 };
 
-let initChart = () => {
-  let filteredGames = games.filter(
-    (e) => e[SALES] > 0.05 && +e[YEAR] == currYear
-  );
+let updateChart = () => {
+  let filteredGames = games.filter((e) => e[SALES] > 0 && +e[YEAR] == currYear);
   let groupedData = d3.group(
     filteredGames,
     (d) => d[layers[0]],
     (d) => d[layers[1]],
     (d) => d[layers[2]]
   );
+  if (groupedData.size === 0) return;
 
   let cPack = pack(groupedData);
-  if (!cPack.children) return;
   if (!currFocus) currFocus = cPack;
 
   svg.on("click", () => zoom(cPack));
@@ -176,60 +203,19 @@ let initChart = () => {
           // transition children in
           .call((enter) => {
             let currentNodes = enter.filter((d) => d.parent === currFocus);
-            currentNodes
-              .select("circle")
-              .transition()
-              .duration(750)
-              .attr("r", (d) => d.r)
-              .attr("fill-opacity", 0.5);
-
-            currentNodes
-              .select("circle.nucleus")
-              .transition()
-              .duration(750)
-              .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
-
-            currentNodes
-              .select("text")
-              .transition()
-              .duration(750)
-              .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
-
+            fadeSelectedNodesContentIn(currentNodes);
+            // updateText();
             return enter;
           });
         return enter;
       },
       (update) => {
         // because the data had been updated, === comparisons can't work
-        update
-          .select("circle")
-          .transition()
-          .duration(zoomDuration)
-          .attr("r", (d) => {
-            return !d.parent ||
-              (d.parent && d.parent.data.key === currFocus.data.key)
-              ? d.r
-              : 0;
-          })
-          .attr("fill-opacity", (d) =>
+        let currentNodes = update.filter(
+          (d) =>
             !d.parent || (d.parent && d.parent.data.key === currFocus.data.key)
-              ? 0.5
-              : 0
-          )
-          .on("start", (d) => {
-            // zoom
-            const transition = svg
-              .transition()
-              .duration(zoomDuration)
-              .tween("zoom", () => {
-                // view is the starting point, current focus is the next point
-                const i = d3.interpolateZoom(
-                  view ? view : [currFocus.x, currFocus.y, currFocus.r * 2],
-                  [currFocus.x, currFocus.y, currFocus.r * 2]
-                );
-                return (t) => zoomTo(i(t));
-              });
-          });
+        );
+        fadeSelectedNodesContentIn(currentNodes);
 
         return update;
       },
@@ -243,22 +229,9 @@ let initChart = () => {
         // console.log("exit", exit.nodes());
         // return exit.remove();
       }
-    )
-    .call((g) => {
-      const label = g.select("text");
-      label.selectAll("tspan").remove();
-      label.append("tspan").text((d) => {
-        return d.data[0] || d.data[GAME];
-      });
-      label
-        .append("tspan")
-        .attr("font-weight", 400)
-        .attr("dy", "1.15em")
-        .attr("x", 22)
-        .text((d) => `$${d.value.toFixed(2)}m`);
+    );
 
-      label.on("mousedown", () => false);
-    });
+  updateText();
 
   // ********************************************************************* //
   // **************************** MOUSE EVENTS *************************** //
@@ -275,6 +248,43 @@ let initChart = () => {
     });
 
   zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
+};
+
+let fadeSelectedNodesContentIn = (selectedNodes) => {
+  selectedNodes
+    .select("circle")
+    .transition()
+    .duration(750)
+    .attr("r", (d) => d.r)
+    .attr("fill-opacity", 0.5);
+
+  selectedNodes
+    .select("circle.nucleus")
+    .transition()
+    .duration(750)
+    .attr("fill-opacity", 1);
+
+  selectedNodes
+    .select("text")
+    .transition()
+    .duration(750)
+    .attr("fill-opacity", 1);
+};
+
+let updateText = () => {
+  const label = svg.selectAll("g").select("text");
+  label.selectAll("tspan").remove();
+  label.append("tspan").text((d) => {
+    return d.data[0] || d.data[GAME];
+  });
+  label
+    .append("tspan")
+    .attr("font-weight", 400)
+    .attr("dy", "1.15em")
+    .attr("x", 22)
+    .text((d) => `$${d.value.toFixed(2)}m`);
+
+  label.on("mousedown", () => false);
 };
 
 // ********************************************************************* //
