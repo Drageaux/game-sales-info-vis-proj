@@ -29,7 +29,7 @@ let view;
 let zoomDuration = 750;
 
 let sliderRange;
-let yearRange = [];
+let currYear = 2001;
 
 const sidebar = d3.select("#sidebar");
 
@@ -42,7 +42,6 @@ const svg = d3
 d3.csv("./circle_pack.csv").then((data) => {
   games = data.filter((game) => game[YEAR] != -1);
   const years = games.map((d) => +d[YEAR]);
-  yearRange = [2001, d3.max(years)];
   sliderRange = d3
     .sliderBottom()
     .min(d3.min(years))
@@ -50,12 +49,12 @@ d3.csv("./circle_pack.csv").then((data) => {
     .width(width * 0.8)
     .ticks(5)
     .step(1)
-    .default(yearRange)
-    .fill("#2196f3")
+    .default(currYear)
+    .fill("white")
     .on("onchange", (val) => {
-      yearRange = val;
+      currYear = val;
       initChart();
-      d3.select("p#value-range").text(val.map(d3.format(".0")).join("-"));
+      d3.select("p#value-simple").text(d3.format(".0")(val));
     });
 
   let gRange = d3
@@ -65,9 +64,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .attr("height", 100)
     .append("g")
     .attr("transform", "translate(30,30)");
-  d3.select("p#value-range").text(
-    sliderRange.value().map(d3.format(".0")).join("-")
-  );
+  d3.select("p#value-range").text(d3.format(".0")(sliderRange.value()));
 
   gRange.call(sliderRange);
 
@@ -110,16 +107,17 @@ let shuffleArray = () => {
 
 let initChart = () => {
   let filteredGames = games.filter(
-    (e) => e[SALES] > 1 && +e[YEAR] >= yearRange[0] && +e[YEAR] <= yearRange[1]
+    (e) => e[SALES] > 0.05 && +e[YEAR] == currYear
   );
-  let dataByRegion = d3.group(
+  let groupedData = d3.group(
     filteredGames,
     (d) => d[layers[0]],
     (d) => d[layers[1]],
     (d) => d[layers[2]]
   );
+  console.log(groupedData);
 
-  let cPack = pack(dataByRegion);
+  let cPack = pack(groupedData);
   if (!cPack.children) return;
   if (!currFocus) currFocus = cPack;
 
