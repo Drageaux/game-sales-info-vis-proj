@@ -53,10 +53,8 @@ d3.csv("./circle_pack.csv").then((data) => {
     .default(yearRange)
     .fill("#2196f3")
     .on("onchange", (val) => {
-      console.log(val);
       yearRange = val;
-      updateChart();
-      zoom(currFocus);
+      initChart();
       d3.select("p#value-range").text(val.map(d3.format(".0")).join("-"));
     });
 
@@ -67,13 +65,13 @@ d3.csv("./circle_pack.csv").then((data) => {
     .attr("height", 100)
     .append("g")
     .attr("transform", "translate(30,30)");
-  // d3.select("p#value-range").text(
-  //   sliderRange.value().map(d3.format(".3")).join("-")
-  // );
+  d3.select("p#value-range").text(
+    sliderRange.value().map(d3.format(".0")).join("-")
+  );
 
   gRange.call(sliderRange);
 
-  updateChart();
+  initChart();
 });
 
 let layers = [REGION, GENRE, PLATFORM];
@@ -107,10 +105,10 @@ let shuffleArray = () => {
     .attr("fill-opacity", 0);
 
   svg.selectAll("g").transition().delay(750).remove();
-  updateChart();
+  initChart();
 };
 
-let updateChart = () => {
+let initChart = () => {
   let filteredGames = games.filter(
     (e) => e[SALES] > 1 && +e[YEAR] >= yearRange[0] && +e[YEAR] <= yearRange[1]
   );
@@ -123,87 +121,186 @@ let updateChart = () => {
   );
 
   let cPack = pack(dataByRegion);
-  currFocus = cPack;
+  if (!cPack.children) return;
 
   svg.on("click", () => zoom(cPack));
 
-  const nodeUpdate = svg
-    .selectAll("g")
-    .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
-    .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
+  // const nodeUpdate = svg
+  //   .selectAll("g")
+  //   .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME]);
 
-  const nodeEnter = nodeUpdate
-    .enter()
-    .append("g")
-    .style("display", (d) => (d.parent === cPack ? "inline" : "none"));
+  // const nodeEnter = nodeUpdate
+  //   .enter()
+  //   .append("g")
+  //   .style("display", (d) => (d.parent === cPack ? "inline" : "none"));
+  // .attr("pointer-events", (d) => (!d.children ? "none" : null)); // no children, no click
+
+  const nodeExit = svg.selectAll("g").exit().remove();
+  // console.log(nodeExit);
+
+  const nodeJoin = svg
+    .selectAll("g")
+    .data(cPack.descendants().slice(1), (d) => d.data[0] || d.data[GAME])
+    .join(
+      (group) => {
+        let enter = group
+          .append("g")
+          .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
+          .call((enter) =>
+            enter
+              .append("circle")
+              .attr("fill", (d) => circleColors[d.depth])
+              .attr("fill-opacity", 0)
+              .attr("stroke", (d) => circleColors[d.depth])
+              .attr("stroke-width", "1px")
+              .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
+              .attr("depth", (d) => d.depth)
+          )
+          .call((enter) =>
+            enter
+              .filter((d) => d.parent === cPack)
+              .select("circle")
+              .transition()
+              .delay(1000)
+              .duration(750)
+              .attr("r", (d) => d.r)
+              .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0))
+          );
+
+        // console.log(enter);
+        // enter
+        //   .append("circle")
+        //   .attr("class", "nucleus")
+        //   .attr("fill", (d) => circleColors[d.depth])
+        //   .attr("fill-opacity", 0)
+        //   .attr("depth", (d) => d.depth)
+        //   .attr("pointer-events", "none")
+        //   .attr("r", 15);
+        // console.log(enter);
+        enter
+          .select("circle")
+          .filter((d) => d.parent === cPack)
+          .transition()
+          .delay(1000)
+          .duration(750)
+          .attr("r", (d) => d.r)
+          .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0));
+
+        const nucleus = enter
+          .append("circle")
+          .attr("class", "nucleus")
+          .attr("fill", (d) => circleColors[d.depth])
+          .attr("fill-opacity", 0)
+          .attr("depth", (d) => d.depth)
+          .attr("pointer-events", "none")
+          .attr("r", 15);
+        // transition in
+        nucleus
+          .filter((d) => d.parent === cPack)
+          .transition()
+          .delay(1000)
+          .duration(750)
+          .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
+        return enter;
+      },
+      (update) => {
+        console.log(currFocus ? currFocus.data : "");
+        update.filter(function (d) {
+          return d.parent === currFocus || this.style.display == "inline";
+        });
+
+        zoom(currFocus);
+        return update;
+      },
+      (exit) => exit.remove()
+    );
+
+  // // fade in
+  // svg
+  //   .selectAll("g")
+  //   .select("circle")
+  //   .attr("fill", (d) => circleColors[d.depth])
+  //   .attr("fill-opacity", 0)
+  //   .attr("stroke", (d) => circleColors[d.depth])
+  //   .attr("stroke-width", "1px")
+  //   .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
+  //   .attr("depth", (d) => d.depth)
+  //   .call((g) =>
+  //     g
+  //       .filter((d) => d.parent === cPack)
+  //       .transition()
+  //       .delay(1000)
+  //       .duration(750)
+  //       .attr("r", (d) => d.r)
+  //       .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0))
+  //   );
 
   // create circle
-  const circle = nodeEnter
-    .append("circle")
-    .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", 0)
-    .attr("stroke", (d) => circleColors[d.depth])
-    .attr("stroke-width", "1px")
-    .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
-    .attr("depth", (d) => d.depth);
-  // transition in
-  circle
-    .filter((d) => d.parent === cPack)
-    .transition()
-    .delay(1000)
-    .duration(750)
-    .attr("r", (d) => d.r)
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0));
+  // const circle = nodeEnter
+  //   .append("circle")
+  //   .attr("fill", (d) => circleColors[d.depth])
+  //   .attr("fill-opacity", 0)
+  //   .attr("stroke", (d) => circleColors[d.depth])
+  //   .attr("stroke-width", "1px")
+  //   .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
+  //   .attr("depth", (d) => d.depth);
+  // // transition in
+  // circle
+  //   .filter((d) => d.parent === cPack)
+  //   .transition()
+  //   .delay(1000)
+  //   .duration(750)
+  //   .attr("r", (d) => d.r)
+  //   .attr("fill-opacity", (d) => (d.parent === cPack ? 0.5 : 0));
 
-  // create nucleus
-  const nucleus = nodeEnter
-    .append("circle")
-    .attr("class", "nucleus")
-    .attr("fill", (d) => circleColors[d.depth])
-    .attr("fill-opacity", 0)
-    .attr("depth", (d) => d.depth)
-    .attr("pointer-events", "none")
-    .attr("r", 15);
-  // transition in
-  nucleus
-    .filter((d) => d.parent === cPack)
-    .transition()
-    .delay(1000)
-    .duration(750)
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
+  // // create nucleus
+  // const nucleus = nodeEnter
+  //   .append("circle")
+  //   .attr("class", "nucleus")
+  //   .attr("fill", (d) => circleColors[d.depth])
+  //   .attr("fill-opacity", 0)
+  //   .attr("depth", (d) => d.depth)
+  //   .attr("pointer-events", "none")
+  //   .attr("r", 15);
+  // // transition in
+  // nucleus
+  //   .filter((d) => d.parent === cPack)
+  //   .transition()
+  //   .delay(1000)
+  //   .duration(750)
+  //   .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
 
-  // create label
-  const labelEnter = nodeEnter
-    .append("text")
-    .attr("fill", (d) => circleColors[d.depth])
-    .attr("y", -5.5)
-    .attr("x", 22)
-    .attr("fill-opacity", 0);
-  const label = nodeEnter.merge(nodeUpdate).select("text");
-  label.selectAll("tspan").remove();
-  label.append("tspan").text((d) => {
-    return d.data[0] || d.data[GAME];
-  });
-  label
-    .append("tspan")
-    .attr("font-weight", 400)
-    .attr("dy", "1.15em")
-    .attr("x", 22)
-    .text((d) => `$${d.value.toFixed(2)}m`);
-  label
-    .filter((d) => d.parent === cPack)
-    .transition()
-    .delay(1000)
-    .duration(750)
-    .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
-  // transition
-  label.on("mousedown", () => false);
+  // // create label
+  // const labelEnter = nodeEnter
+  //   .append("text")
+  //   .attr("fill", (d) => circleColors[d.depth])
+  //   .attr("y", -5.5)
+  //   .attr("x", 22)
+  //   .attr("fill-opacity", 0)
+  //   .filter((d) => d.parent === cPack)
+  //   .transition()
+  //   .delay(1000)
+  //   .duration(750)
+  //   .attr("fill-opacity", (d) => (d.parent === cPack ? 1 : 0));
+  // const label = nodeEnter.merge(nodeUpdate).select("text");
+  // label.selectAll("tspan").remove();
+  // label.append("tspan").text((d) => {
+  //   return d.data[0] || d.data[GAME];
+  // });
+  // label
+  //   .append("tspan")
+  //   .attr("font-weight", 400)
+  //   .attr("dy", "1.15em")
+  //   .attr("x", 22)
+  //   .text((d) => `$${d.value.toFixed(2)}m`);
+
+  // // transition
+  // label.on("mousedown", () => false);
 
   // ********************************************************************* //
   // **************************** MOUSE EVENTS *************************** //
   // ********************************************************************* //
-  const node = nodeUpdate
-    .merge(nodeEnter)
+  nodeJoin
     .on("mouseover", onMouseOver)
     .on("mouseout", onMouseOut)
     .on("click", (event, d, i) => {
@@ -214,7 +311,8 @@ let updateChart = () => {
       }
     });
 
-  zoomTo([cPack.x, cPack.y, cPack.r * 2]);
+  if (!currFocus) currFocus = cPack;
+  zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
 };
 
 // ********************************************************************* //
@@ -286,23 +384,23 @@ let onMouseOut = (event, d) => {
 // ********************************************************************* //
 // ***************************** FUNCTIONS ***************************** //
 // ********************************************************************* //
-let animate = () => {
+let changeLayers = () => {
   // update animation
   const node = svg.selectAll("g");
 
-  node
-    .transition()
-    .duration(zoomDuration)
-    .on("start", function (d) {
-      if (d === currFocus || d.parent === currFocus)
-        this.style.display = "inline";
-      else this.style.display = "none";
-    })
-    .on("end", function (d) {
-      if (d !== currFocus && d.parent !== currFocus)
-        this.style.display = "none";
-      else this.style.display = "inline";
-    });
+  // hide  nodes except current
+
+  // node.transition().duration(zoomDuration);
+  // .on("start", function (d) {
+  //   if (d === currFocus || d.parent === currFocus)
+  //     this.style.display = "inline";
+  //   else this.style.display = "none";
+  // })
+  // .on("end", function (d) {
+  //   if (d !== currFocus && d.parent !== currFocus)
+  //     this.style.display = "none";
+  //   else this.style.display = "inline";
+  // });
 
   node
     .select("circle")
@@ -310,7 +408,7 @@ let animate = () => {
     .duration(zoomDuration)
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
     .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
-    // make the outer circle display properly
+    // make the outer circle hide properly
     .on("start", function (d) {
       if (d === currFocus || d.parent === currFocus)
         this.style.display = "inline";
@@ -353,10 +451,21 @@ let zoomTo = (v) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
     });
   node.select("circle").attr("r", (d) => d.r * k);
+  const label = node.select("text");
+  label.selectAll("tspan").remove();
+  label.append("tspan").text((d) => {
+    return d.data[0] || d.data[GAME];
+  });
+  label
+    .append("tspan")
+    .attr("font-weight", 400)
+    .attr("dy", "1.15em")
+    .attr("x", 22)
+    .text((d) => `$${d.value.toFixed(2)}m`);
 };
 
 let zoom = (d) => {
-  if (d === currFocus || !d) return;
+  if (!d) return;
   // change focus to new node
   currFocus = d;
 
@@ -432,7 +541,7 @@ let zoom = (d) => {
       return (t) => zoomTo(i(t));
     });
 
-  animate();
+  changeLayers();
 };
 
 // circle packing function
