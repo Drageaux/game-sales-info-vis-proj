@@ -161,9 +161,6 @@ let updateChart = () => {
   const nodeJoin = svg
     .selectAll("g")
     .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
-    // .filter(function (d) {
-    //   return d.depth - 1 === currFocus.depth;
-    // })
     .join(
       (group) => {
         let enter = group
@@ -204,7 +201,6 @@ let updateChart = () => {
           .call((enter) => {
             let currentNodes = enter.filter((d) => d.parent === currFocus);
             fadeSelectedNodesContentIn(currentNodes);
-            // updateText();
             return enter;
           });
         return enter;
@@ -516,7 +512,6 @@ let zoom = (d) => {
         currFocus.y,
         currFocus.r * 2,
       ]);
-      console.log(view);
       return (t) => zoomTo(i(t));
     });
 
