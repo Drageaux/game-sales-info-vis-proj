@@ -87,6 +87,7 @@ d3.csv("./circle_pack.csv").then((data) => {
 
   updateData();
   updateChart();
+  zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
 });
 
 window.onresize = () => {
@@ -166,13 +167,13 @@ let updateChart = () => {
     .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
     .join(
       (group) => {
+        console.log(group);
         let enter = group
           .filter((d) => {
-            if (d.parent === currFocus) console.log(d);
-            return d.parent === currFocus;
+            return d.parent === currFocus || d === currFocus;
           })
           .append("g")
-          .style("display", (d) => (d.parent === currFocus ? "inline" : "none"))
+          .attr("key", (d) => d.data[0])
           // create circles
           .call((enter) =>
             enter
@@ -188,7 +189,10 @@ let updateChart = () => {
           // create nucleus
           .call((enter) =>
             enter
-              .filter((d) => d.r > 20)
+              .filter((d) => {
+                const k = (width / currFocus.r) * 2;
+                return d.r * k > 30;
+              })
               .append("circle")
               .attr("class", "nucleus")
               .attr("fill", (d) => circleColors[d.depth])
@@ -200,7 +204,6 @@ let updateChart = () => {
           // create label
           .call((enter) =>
             enter
-              .filter((d, i) => i < 5)
               .append("text")
               .attr("fill", (d) => circleColors[d.depth])
               .attr("y", -5.5)
@@ -214,6 +217,7 @@ let updateChart = () => {
             fadeSelectedNodesContentIn(currentNodes);
             return enter;
           });
+
         return enter;
       },
       (update) => {
@@ -228,13 +232,14 @@ let updateChart = () => {
       },
       (exit) => {
         // TODO: remove
-        return exit
-          .filter(function (d) {
-            return this.style.display === "inline";
-          })
-          .remove();
+        return exit.transition().duration(750).attr("r", 0).remove();
       }
     );
+
+  let others = nodeJoin.filter(
+    (d) => d.parent != currFocus && d.depth !== currFocus.depth
+  );
+  others.remove();
 
   // ********************************************************************* //
   // **************************** MOUSE EVENTS *************************** //
@@ -251,8 +256,6 @@ let updateChart = () => {
         zoom(d), event.stopPropagation();
       }
     });
-
-  zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
 };
 
 let fadeSelectedNodesContentIn = (selectedNodes) => {
@@ -277,7 +280,18 @@ let fadeSelectedNodesContentIn = (selectedNodes) => {
 };
 
 let updateText = () => {
-  const label = svg.selectAll("g").select("text");
+  if (currFocus.depth === 3) {
+    currFocus.children // also lazy ranking the games in its final nested category
+      .map((d, i) => {
+        d.rank = i + 1;
+        return d;
+      });
+  }
+
+  const label = svg
+    .selectAll("g")
+    .filter((d) => d.rank == null || d.rank < 5)
+    .select("text");
   label.selectAll("tspan").remove();
   label.append("tspan").text((d) => {
     return d.data[0] || d.data[GAME];
@@ -366,18 +380,17 @@ let changeLayers = () => {
   const node = svg.selectAll("g");
   updateChart();
 
-  // hide  nodes except current
+  // hide nodes except current
   node
     .transition()
     .duration(zoomDuration)
     .on("start", function (d) {
       if (d === currFocus || d.parent === currFocus)
         this.style.display = "inline";
-      else this.style.display = "none";
+      else d3.select(this).remove();
     })
     .on("end", function (d) {
-      if (d !== currFocus && d.parent !== currFocus)
-        this.style.display = "none";
+      if (d !== currFocus && d.parent !== currFocus) d3.select(this).remove();
       else this.style.display = "inline";
     });
 
@@ -386,16 +399,16 @@ let changeLayers = () => {
     .transition()
     .duration(zoomDuration)
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
-    .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0))
-    // make the outer circle hide properly
-    .on("start", function (d) {
-      if (d === currFocus || d.parent === currFocus)
-        this.style.display = "inline";
-    })
-    .on("end", function (d) {
-      if (d !== currFocus && d.parent !== currFocus)
-        this.style.display = "none";
-    });
+    .attr("fill-opacity", (d) => (d.parent === currFocus ? 0.5 : 0));
+  // // make the outer circle hide properly
+  // .on("start", function (d) {
+  //   if (d === currFocus || d.parent === currFocus)
+  //     this.style.display = "inline";
+  // })
+  // .on("end", function (d) {
+  //   if (d !== currFocus && d.parent !== currFocus)
+  //     this.style.display = "none";
+  // });
 
   node
     .select("circle.nucleus")
@@ -424,7 +437,9 @@ let zoomTo = (v) => {
   const node = svg
     .selectAll("g")
     .filter(function (d) {
-      return this.style.display === "inline";
+      if (d.parent === currFocus || this.style.display === "inline")
+        console.log(d);
+      return d.parent === currFocus || this.style.display === "inline";
     })
     .attr("transform", (d) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
@@ -444,6 +459,7 @@ let zoomTo = (v) => {
 };
 
 let zoom = (d) => {
+  console.log("zoom at", d);
   if (!d) return;
   // change focus to new node
   currFocus = d;
@@ -491,12 +507,6 @@ let zoom = (d) => {
       .append("div")
       .style("font-weight", 400)
       .text((d) => `$${d.data[SALES]}m`);
-
-    currFocus.children // also lazy ranking the games in its final nested category
-      .map((d, i) => {
-        d.rank = i + 1;
-        return d;
-      });
   } else if (currFocus.depth === 0) {
     // slider appears
     d3.select("#slider").style("display", "inline");
@@ -510,21 +520,20 @@ let zoom = (d) => {
     sidebar.select("#details").style("display", "none");
   }
 
-  // zoom
-  const transition = svg
+  // start absolute animation of all nodes
+  changeLayers();
+  // start zooming to change relative view
+  svg
     .transition()
     .duration(zoomDuration)
     .tween("zoom", () => {
       // view is the starting point, current focus is the next point
-      const i = d3.interpolateZoom(view, [
-        currFocus.x,
-        currFocus.y,
-        currFocus.r * 2,
-      ]);
+      const i = d3.interpolateZoom(
+        view || [currFocus.x, currFocus.y, currFocus.r * 2],
+        [currFocus.x, currFocus.y, currFocus.r * 2]
+      );
       return (t) => zoomTo(i(t));
     });
-
-  changeLayers();
 };
 
 // circle packing function
