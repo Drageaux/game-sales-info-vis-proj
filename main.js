@@ -31,8 +31,6 @@ let zoomDuration = 750;
 let sliderRange;
 let currYears = [2000, 2020];
 
-const sidebar = d3.select("#sidebar");
-
 const svg = d3
   .select("svg")
   .attr(
@@ -41,6 +39,10 @@ const svg = d3
   )
   .style("background", color(0))
   .style("cursor", "pointer");
+
+const sidebar = d3
+  .select("#sidebar")
+  .style("height", `${svg.node().getBoundingClientRect().height}px`);
 
 let timer;
 d3.csv("./circle_pack.csv").then((data) => {
@@ -121,7 +123,7 @@ let shuffleArray = () => {
   zoom(currFocus);
   const currentNodes = svg.selectAll("g");
   currentNodes
-    .select("circle")
+    .select("circle.nodeCircle")
     .transition()
     .duration(750)
     .attr("r", 0)
@@ -170,7 +172,7 @@ let updateChart = () => {
         console.log(group);
         let enter = group
           .filter((d) => {
-            return d.parent === currFocus || d === currFocus;
+            return d.value > 0.5 && (d.parent === currFocus || d === currFocus);
           })
           .append("g")
           .attr("key", (d) => d.data[0])
@@ -191,8 +193,8 @@ let updateChart = () => {
           .call((enter) =>
             enter
               .filter((d) => {
-                const k = (width / currFocus.r) * 2;
-                return d.r * k > 30;
+                const k = width / (currFocus.r * 2);
+                return d.r * k > 16;
               })
               .append("circle")
               .attr("class", "nucleus")
@@ -210,7 +212,6 @@ let updateChart = () => {
               .attr("y", -5.5)
               .attr("x", 22)
               .attr("fill-opacity", 0)
-              .call(() => updateText())
           )
           // transition children in
           .call((enter) => {
@@ -241,6 +242,8 @@ let updateChart = () => {
     (d) => d.parent != currFocus && d.depth !== currFocus.depth
   );
   others.remove();
+
+  updateText();
 
   // ********************************************************************* //
   // **************************** MOUSE EVENTS *************************** //
@@ -347,7 +350,7 @@ let onMouseOut = (event, d) => {
     .selectAll("g")
     .filter((e) => e !== d && e.parent === d.parent);
   filtered
-    .select("circle")
+    .select("circle.nodeCircle")
     .transition()
     .duration(250)
     .attr("fill-opacity", 0.5);
@@ -492,20 +495,20 @@ let zoom = (d) => {
     // list out game items
     const gameItems = list
       .selectAll("li")
-      .data(currFocus.children)
+      .data(currFocus.children.sort((a, b) => b.value - a.value))
       .enter()
       .append("li")
       .style("list-style", "none")
       .style("font-size", "0.75rem")
       .style("margin-top", "0.5rem")
-      .text((d) => d.data[GAME])
+      .text((d) => d.data[0] || d.data[GAME])
       .on("mouseover", onMouseOver)
       .on("mouseout", onMouseOut);
 
     gameItems
       .append("div")
       .style("font-weight", 400)
-      .text((d) => `$${d.data[SALES]}m`);
+      .text((d) => `${d.value >= 0.01 ? "$" + d.value : "< $0.01"}m`);
   } else if (currFocus.depth === 0) {
     // slider appears
     d3.select("#slider").style("display", "inline");

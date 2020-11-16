@@ -34,3 +34,9 @@ body {
 #slider {
   color: white;
 }
+
+#sidebar {
+  overflow-y: auto;
+  border-radius: 1rem;
+  border-width: 1px;
+}
