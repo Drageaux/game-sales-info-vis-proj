@@ -43,6 +43,9 @@ const svg = d3
 const sidebar = d3
   .select("#sidebar")
   .style("height", `${svg.node().getBoundingClientRect().height}px`);
+sidebar
+  .select("#details")
+  .style("height", `${svg.node().getBoundingClientRect().height}px`);
 
 let timer;
 d3.csv("./circle_pack.csv").then((data) => {
@@ -153,7 +156,6 @@ let updateData = () => {
   let filteredGames = games.filter(
     (e) => e[SALES] > 0 && +e[YEAR] >= currYears[0] && +e[YEAR] <= currYears[1]
   );
-  console.log("game results", filteredGames.length, filteredGames);
   let groupedData = d3.group(
     filteredGames,
     (d) => d[layers[0]],
@@ -479,6 +481,8 @@ let zoom = (d) => {
   if (!d) return;
   // change focus to new node
   currFocus = d;
+
+  sidebar.style("border-color", circleColors[currFocus.depth + 1]);
 
   if (currFocus.depth === 3) {
     // display game details at game level
