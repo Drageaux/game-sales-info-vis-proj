@@ -57,12 +57,13 @@ d3.csv("./circle_pack.csv").then((data) => {
     .max(d3.max(years))
     .width(
       d3.select("#slider").select("div").node().getBoundingClientRect().width *
-        0.8
+        1
     )
+    .tickFormat(d3.format(".0d"))
     .ticks(5)
     .step(1)
     .default(currYears)
-    .fill("white")
+    .fill("#2196f3")
     .on("onchange", (val) => {
       currYears = val;
       // IMPORTANT: delay before updating the entire chart with new data
@@ -96,6 +97,7 @@ d3.csv("./circle_pack.csv").then((data) => {
   d3.select("p#value-range").text(sliderRange.value());
 
   gRange.call(sliderRange);
+  gRange.selectAll("text").attr("fill", "white");
 
   window.onresize();
 
@@ -337,7 +339,7 @@ let updateText = () => {
     .attr("font-weight", 400)
     .attr("dy", "1.15em")
     .attr("x", 22)
-    .text((d) => `$${d.value.toFixed(2)}m`);
+    .text((d) => `$${d3.format(",.2f")(d.value)}m`);
 
   label.on("mousedown", () => false);
 };
