@@ -66,7 +66,7 @@ d3.csv("./circle_pack.csv").then((data) => {
         currFocus = null;
         updateData();
         updateChart();
-        zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
+        if (currFocus) zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
       }, 750);
       d3.select("p#value-simple").text(val.join("-"));
     });
@@ -169,6 +169,8 @@ let updateData = () => {
 };
 
 let updateChart = () => {
+  // console.log("cpack", cPack);
+  if (!currFocus || cPack.descendants().length === 0) return;
   const nodeJoin = svg
     .selectAll("g")
     .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
