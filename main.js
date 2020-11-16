@@ -62,7 +62,11 @@ d3.csv("./circle_pack.csv").then((data) => {
       // IMPORTANT: delay before updating the entire chart with new data
       clearTimeout(timer);
       timer = setTimeout(() => {
+        svg.selectAll("g").remove();
+        currFocus = null;
+        updateData();
         updateChart();
+        zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
       }, 750);
       d3.select("p#value-simple").text(val.join("-"));
     });
@@ -72,7 +76,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .append("svg")
     .attr(
       "width",
-      d3.select("#slider").select("div").node().getBoundingClientRect().width
+      d3.select("#slider").node().getBoundingClientRect().width + 100
     )
     .attr("height", 100)
     .append("g")
@@ -149,6 +153,7 @@ let updateData = () => {
   let filteredGames = games.filter(
     (e) => e[SALES] > 0 && +e[YEAR] >= currYears[0] && +e[YEAR] <= currYears[1]
   );
+  console.log("game results", filteredGames.length, filteredGames);
   let groupedData = d3.group(
     filteredGames,
     (d) => d[layers[0]],
@@ -158,7 +163,7 @@ let updateData = () => {
   if (groupedData.size === 0) return;
 
   cPack = pack(groupedData);
-  if (!currFocus) currFocus = cPack;
+  currFocus = cPack;
 
   svg.on("click", () => zoom(cPack));
 };
@@ -169,10 +174,9 @@ let updateChart = () => {
     .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
     .join(
       (group) => {
-        console.log(group);
         let enter = group
           .filter((d) => {
-            return d.value > 0.5 && (d.parent === currFocus || d === currFocus);
+            return d.parent === currFocus || d === currFocus;
           })
           .append("g")
           .attr("key", (d) => d.data[0])
@@ -187,7 +191,7 @@ let updateChart = () => {
               .attr("stroke-width", "1px")
               .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
               .attr("depth", (d) => d.depth)
-              .attr("r", (d) => d.r)
+              .attr("r", (d) => 0)
           )
           // create nucleus
           .call((enter) =>
@@ -223,18 +227,21 @@ let updateChart = () => {
         return enter;
       },
       (update) => {
-        // because the data had been updated, === comparisons can't work
-        let currentNodes = update.filter(
-          (d) =>
-            !d.parent || (d.parent && d.parent.data.key === currFocus.data.key)
-        );
-        fadeSelectedNodesContentIn(currentNodes);
+        // // because the data had been updated, === comparisons can't work
+        // let currentNodes = update.filter(
+        //   (d) =>
+        //     !d.parent || (d.parent && d.parent.data.key === currFocus.data.key)
+        // );
+        // currentNodes.attr("r", 0);
+        // fadeSelectedNodesContentIn(currentNodes);
 
         return update;
       },
       (exit) => {
         // TODO: remove
-        return exit.transition().duration(750).attr("r", 0).remove();
+        // exit.select("circle").transition().duration(750).attr("r", 0);
+
+        return exit.transition().duration(750).style("opacity", 0);
       }
     );
 
@@ -263,24 +270,29 @@ let updateChart = () => {
 };
 
 let fadeSelectedNodesContentIn = (selectedNodes) => {
+  console.log("selected nodes", selectedNodes);
+  if (selectedNodes.nodes().length)
+    console.log("length", selectedNodes.nodes().length);
+  let duration = currFocus ? 0 : 750;
   selectedNodes
     .select("circle.nodeCircle")
     .transition()
-    .duration(750)
+    .duration(duration)
     .attr("r", (d) => d.r)
     .attr("fill-opacity", 0.5);
 
   selectedNodes
     .select("circle.nucleus")
     .transition()
-    .duration(750)
+    .duration(duration)
     .attr("fill-opacity", 1);
 
   selectedNodes
     .select("text")
     .transition()
-    .duration(750)
-    .attr("fill-opacity", 1);
+    .duration(duration)
+    .attr("fill-opacity", 1)
+    .style("display", selectedNodes.nodes().length > 15 ? "none" : "inline");
 };
 
 let updateText = () => {
@@ -294,7 +306,7 @@ let updateText = () => {
 
   const label = svg
     .selectAll("g")
-    .filter((d) => d.rank == null || d.rank < 5)
+    // .filter((d) => d.rank == null || d.rank < 5)
     .select("text");
   label.selectAll("tspan").remove();
   label.append("tspan").text((d) => {
@@ -314,25 +326,20 @@ let updateText = () => {
 // ************************ MOUSE EVENT HELPERS ************************ //
 // ********************************************************************* //
 let onMouseOver = (event, d) => {
-  const filtered = svg
+  const siblings = svg
     .selectAll("g")
     .filter((e) => e.parent === d.parent && e !== d);
-  filtered
+  siblings
     .select("circle.nodeCircle")
     .transition()
     .duration(250)
     .attr("fill-opacity", 0.2);
-  filtered
+  siblings
     .select("circle.nucleus")
     .transition()
     .duration(250)
     .attr("fill-opacity", 0.2);
-  filtered
-    .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
-    .select("text")
-    .transition()
-    .duration(250)
-    .attr("fill-opacity", 0.2);
+  siblings.select("text").transition().duration(250).attr("fill-opacity", 0.2);
   // dim the non-selected games in the sidebar too
   if (currFocus.depth === 3) {
     sidebar
@@ -346,22 +353,25 @@ let onMouseOver = (event, d) => {
 };
 
 let onMouseOut = (event, d) => {
-  const filtered = svg
+  const siblings = svg
     .selectAll("g")
     .filter((e) => e !== d && e.parent === d.parent);
-  filtered
+  siblings
     .select("circle.nodeCircle")
     .transition()
     .duration(250)
     .attr("fill-opacity", 0.5);
-  filtered
+  siblings
     .select("circle.nucleus")
     .transition()
     .duration(250)
     .attr("fill-opacity", 1);
-  filtered
-    .filter((e) => e.rank == null || (e.rank != null && e.rank <= 5))
+  siblings
+    .filter(function (d) {
+      return this.style.display === "inline";
+    })
     .select("text")
+    .style("display", "inline")
     .transition()
     .duration(250)
     .attr("fill-opacity", 1);
@@ -427,7 +437,7 @@ let changeLayers = () => {
     .attr("fill-opacity", (d) =>
       d.parent === currFocus &&
       // if is a game, display text for only top 5
-      (d.rank == null || (d.rank != null && d.rank <= 5))
+      (d.rank == null || d.rank <= 5)
         ? 1
         : 0
     );
@@ -519,7 +529,7 @@ let zoom = (d) => {
     // hide both at mid levels
     d3.select("#slider").style("display", "none");
     sidebar.select("#orderer").style("display", "none");
-    sidebar.select("#details").style("display", "none");
+    // sidebar.select("#details").style("display", "none");
   }
 
   // start absolute animation of all nodes
