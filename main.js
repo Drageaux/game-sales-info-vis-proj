@@ -55,7 +55,10 @@ d3.csv("./circle_pack.csv").then((data) => {
     .sliderBottom()
     .min(d3.min(years))
     .max(d3.max(years))
-    .width(width * 0.8)
+    .width(
+      d3.select("#slider").select("div").node().getBoundingClientRect().width *
+        0.8
+    )
     .ticks(5)
     .step(1)
     .default(currYears)
@@ -94,9 +97,12 @@ d3.csv("./circle_pack.csv").then((data) => {
 
   gRange.call(sliderRange);
 
+  window.onresize();
+
   updateData();
   updateChart();
-  zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
+  // zoomTo([currFocus.x, currFocus.y, currFocus.r * 2]);
+  zoom(cPack);
 });
 
 window.onresize = () => {
@@ -355,15 +361,13 @@ let onMouseOver = (event, d) => {
     .attr("fill-opacity", 0.2);
   siblings.select("text").transition().duration(250).attr("fill-opacity", 0.2);
   // dim the non-selected games in the sidebar too
-  if (currFocus.depth === 3) {
-    sidebar
-      .select("#details")
-      .selectAll("li")
-      .filter((e) => e.parent === d.parent && e !== d)
-      .transition()
-      .duration(250)
-      .style("opacity", 0.2);
-  }
+  sidebar
+    .select("#details")
+    .selectAll("li")
+    .filter((e) => e.parent === d.parent && e !== d)
+    .transition()
+    .duration(250)
+    .style("opacity", 0.2);
 };
 
 let onMouseOut = (event, d) => {
@@ -382,14 +386,12 @@ let onMouseOut = (event, d) => {
     .attr("fill-opacity", 1);
   siblings.select("text").transition().duration(250).attr("fill-opacity", 1);
   // return the dimmed games in the sidebar to normal
-  if (currFocus.depth === 3) {
-    sidebar
-      .select("#details")
-      .selectAll("li")
-      .filter((e) => e.parent === d.parent && e !== d)
-      .transition(250)
-      .style("opacity", 1);
-  }
+  sidebar
+    .select("#details")
+    .selectAll("li")
+    .filter((e) => e.parent === d.parent && e !== d)
+    .transition(250)
+    .style("opacity", 1);
 };
 
 // ********************************************************************* //
@@ -483,56 +485,68 @@ let zoom = (d) => {
   currFocus = d;
 
   sidebar.style("border-color", circleColors[currFocus.depth + 1]);
+  // display game details at game level
+  sidebar.select("#orderer").style("display", "none");
+  const details = sidebar
+    .select("#details")
+    .style("display", "inline")
+    .style("color", circleColors[currFocus.depth + 1]);
+  details.selectAll("*").remove();
 
-  if (currFocus.depth === 3) {
-    // display game details at game level
+  let exampleGame = currFocus.children[0].data;
+  let layers = currFocus.ancestors().reverse().slice(1);
+  console.log(layers.map((d) => d.data[0]));
+  let description = layers.reduce((prev, curr, i) => {
+    console.log(prev, curr);
+    return i === 0 ? curr.data[0] : prev + ", " + curr.data[0];
+  }, "");
+  console.log(description);
+
+  // create list and add title
+  let list = details
+    .append("ul")
+    .text(
+      description
+        ? `Full list of all games for ${description}`
+        : "Full list of game sales for all regions"
+    );
+  // add subtitle text
+  list
+    .append("div")
+    .style("font-weight", 400)
+    .style("font-size", "0.75rem")
+    .style("opacity", 0.75)
+    .text("(Ranked by game sales)");
+  // list out game items
+  const gameItems = list
+    .selectAll("li")
+    .data(currFocus.children.sort((a, b) => b.value - a.value))
+    .enter()
+    .append("li")
+    .style("list-style", "none")
+    .style("font-size", "0.75rem")
+    .style("margin-top", "0.5rem")
+    .text((d) => d.data[0] || d.data[GAME])
+    .on("mouseover", onMouseOver)
+    .on("mouseout", onMouseOut);
+
+  gameItems
+    .append("div")
+    .style("font-weight", 400)
+    .text(
+      (d) =>
+        `${d.value >= 0.01 ? "$" + d3.format(",.2f")(d.value) : "< $0.01"}m`
+    );
+
+  // hide and show components
+  if (currFocus.depth != 0) {
     svg.select("#slider").style("display", "none");
-    sidebar.select("#orderer").style("display", "none");
-    const details = sidebar
-      .select("#details")
-      .style("display", "inline")
-      .style("color", circleColors[4]);
-    details.selectAll("*").remove();
-
-    let exampleGame = currFocus.children[0].data;
-    // create list and add title
-    let list = details
-      .append("ul")
-      .text(
-        `Full list of all games for ${exampleGame[layers[0]]}, ${
-          exampleGame[layers[1]]
-        }, ${exampleGame[layers[2]]}`
-      );
-    // add subtitle text
-    list
-      .append("div")
-      .style("font-weight", 400)
-      .style("font-size", "0.75rem")
-      .style("opacity", 0.75)
-      .text("(Ranked by game sales)");
-    // list out game items
-    const gameItems = list
-      .selectAll("li")
-      .data(currFocus.children.sort((a, b) => b.value - a.value))
-      .enter()
-      .append("li")
-      .style("list-style", "none")
-      .style("font-size", "0.75rem")
-      .style("margin-top", "0.5rem")
-      .text((d) => d.data[0] || d.data[GAME])
-      .on("mouseover", onMouseOver)
-      .on("mouseout", onMouseOut);
-
-    gameItems
-      .append("div")
-      .style("font-weight", 400)
-      .text((d) => `${d.value >= 0.01 ? "$" + d.value : "< $0.01"}m`);
   } else if (currFocus.depth === 0) {
     // slider appears
     d3.select("#slider").style("display", "inline");
-    // orderer appears
-    sidebar.select("#orderer").style("display", "inline");
-    sidebar.select("#details").style("display", "none");
+    // // orderer appears
+    // sidebar.select("#orderer").style("display", "inline");
+    // sidebar.select("#details").style("display", "none");
   } else {
     // hide both at mid levels
     d3.select("#slider").style("display", "none");
