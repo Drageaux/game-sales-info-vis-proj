@@ -62,7 +62,8 @@ d3.csv("./circle_pack.csv").then((data) => {
       // IMPORTANT: delay before updating the entire chart with new data
       clearTimeout(timer);
       timer = setTimeout(() => {
-        svg.selectAll("g").remove();
+        svg.selectAll("g").transition().duration(250).style("opacity", 0);
+        svg.selectAll("g").transition().delay(250).remove();
         currFocus = null;
         updateData();
         updateChart();
