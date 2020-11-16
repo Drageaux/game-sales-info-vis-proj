@@ -29,7 +29,7 @@ let view;
 let zoomDuration = 750;
 
 let sliderRange;
-let currYear = 2001;
+let currYears = [2000, 2020];
 
 const sidebar = d3.select("#sidebar");
 
@@ -53,16 +53,16 @@ d3.csv("./circle_pack.csv").then((data) => {
     .width(width * 0.8)
     .ticks(5)
     .step(1)
-    .default(currYear)
+    .default(currYears)
     .fill("white")
     .on("onchange", (val) => {
-      currYear = val;
+      currYears = val;
       // IMPORTANT: delay before updating the entire chart with new data
       clearTimeout(timer);
       timer = setTimeout(() => {
         updateChart();
       }, 750);
-      d3.select("p#value-simple").text(d3.format(".0")(val));
+      d3.select("p#value-simple").text(val.join("-"));
     });
 
   let gRange = d3
@@ -70,8 +70,7 @@ d3.csv("./circle_pack.csv").then((data) => {
     .append("svg")
     .attr(
       "width",
-      d3.select("#slider").select("div").node().getBoundingClientRect().width *
-        0.9
+      d3.select("#slider").select("div").node().getBoundingClientRect().width
     )
     .attr("height", 100)
     .append("g")
@@ -82,10 +81,11 @@ d3.csv("./circle_pack.csv").then((data) => {
           .width * 0.1
       },30)`
     );
-  d3.select("p#value-range").text(d3.format(".0")(sliderRange.value()));
+  d3.select("p#value-range").text(sliderRange.value());
 
   gRange.call(sliderRange);
 
+  updateData();
   updateChart();
 });
 
@@ -118,9 +118,7 @@ let shuffleArray = () => {
 
   // right now only changing the order of the layers require exit
   zoom(currFocus);
-  const currentNodes = svg.selectAll("g").filter(function (d) {
-    return d.parent === currFocus || this.style.display === "inline";
-  });
+  const currentNodes = svg.selectAll("g");
   currentNodes
     .select("circle")
     .transition()
@@ -143,8 +141,11 @@ let shuffleArray = () => {
   updateChart();
 };
 
-let updateChart = () => {
-  let filteredGames = games.filter((e) => e[SALES] > 0 && +e[YEAR] == currYear);
+let cPack;
+let updateData = () => {
+  let filteredGames = games.filter(
+    (e) => e[SALES] > 0 && +e[YEAR] >= currYears[0] && +e[YEAR] <= currYears[1]
+  );
   let groupedData = d3.group(
     filteredGames,
     (d) => d[layers[0]],
@@ -153,23 +154,30 @@ let updateChart = () => {
   );
   if (groupedData.size === 0) return;
 
-  let cPack = pack(groupedData);
+  cPack = pack(groupedData);
   if (!currFocus) currFocus = cPack;
 
   svg.on("click", () => zoom(cPack));
+};
 
+let updateChart = () => {
   const nodeJoin = svg
     .selectAll("g")
     .data(cPack.descendants(), (d) => d.data[0] || d.data[GAME])
     .join(
       (group) => {
         let enter = group
+          .filter((d) => {
+            if (d.parent === currFocus) console.log(d);
+            return d.parent === currFocus;
+          })
           .append("g")
-          .style("display", (d) => (d.parent === cPack ? "inline" : "none"))
+          .style("display", (d) => (d.parent === currFocus ? "inline" : "none"))
           // create circles
           .call((enter) =>
             enter
               .append("circle")
+              .attr("class", "nodeCircle")
               .attr("fill", (d) => circleColors[d.depth])
               .attr("fill-opacity", 0)
               .attr("stroke", (d) => circleColors[d.depth])
@@ -180,6 +188,7 @@ let updateChart = () => {
           // create nucleus
           .call((enter) =>
             enter
+              .filter((d) => d.r > 20)
               .append("circle")
               .attr("class", "nucleus")
               .attr("fill", (d) => circleColors[d.depth])
@@ -191,11 +200,13 @@ let updateChart = () => {
           // create label
           .call((enter) =>
             enter
+              .filter((d, i) => i < 5)
               .append("text")
               .attr("fill", (d) => circleColors[d.depth])
               .attr("y", -5.5)
               .attr("x", 22)
               .attr("fill-opacity", 0)
+              .call(() => updateText())
           )
           // transition children in
           .call((enter) => {
@@ -225,8 +236,6 @@ let updateChart = () => {
       }
     );
 
-  updateText();
-
   // ********************************************************************* //
   // **************************** MOUSE EVENTS *************************** //
   // ********************************************************************* //
@@ -248,7 +257,7 @@ let updateChart = () => {
 
 let fadeSelectedNodesContentIn = (selectedNodes) => {
   selectedNodes
-    .select("circle")
+    .select("circle.nodeCircle")
     .transition()
     .duration(750)
     .attr("r", (d) => d.r)
@@ -291,7 +300,7 @@ let onMouseOver = (event, d) => {
     .selectAll("g")
     .filter((e) => e.parent === d.parent && e !== d);
   filtered
-    .select("circle")
+    .select("circle.nodeCircle")
     .transition()
     .duration(250)
     .attr("fill-opacity", 0.2);
@@ -355,9 +364,9 @@ let onMouseOut = (event, d) => {
 let changeLayers = () => {
   // update animation
   const node = svg.selectAll("g");
+  updateChart();
 
   // hide  nodes except current
-
   node
     .transition()
     .duration(zoomDuration)
@@ -373,7 +382,7 @@ let changeLayers = () => {
     });
 
   node
-    .select("circle")
+    .select("circle.nodeCircle")
     .transition()
     .duration(zoomDuration)
     .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
@@ -415,12 +424,12 @@ let zoomTo = (v) => {
   const node = svg
     .selectAll("g")
     .filter(function (d) {
-      return d.parent === currFocus || this.style.display === "inline";
+      return this.style.display === "inline";
     })
     .attr("transform", (d) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
     });
-  node.select("circle").attr("r", (d) => d.r * k);
+  node.select("circle.nodeCircle").attr("r", (d) => d.r * k);
   // const label = node.select("text");
   // label.selectAll("tspan").remove();
   // label.append("tspan").text((d) => {
