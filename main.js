@@ -185,6 +185,7 @@ let updateChart = () => {
               .attr("stroke-width", "1px")
               .attr("stroke-opacity", (d) => (d === currFocus ? 1 : 0))
               .attr("depth", (d) => d.depth)
+              .attr("r", (d) => d.r)
           )
           // create nucleus
           .call((enter) =>
@@ -437,9 +438,7 @@ let zoomTo = (v) => {
   const node = svg
     .selectAll("g")
     .filter(function (d) {
-      if (d.parent === currFocus || this.style.display === "inline")
-        console.log(d);
-      return d.parent === currFocus || this.style.display === "inline";
+      return d.parent === currFocus || d === currFocus;
     })
     .attr("transform", (d) => {
       return `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`;
