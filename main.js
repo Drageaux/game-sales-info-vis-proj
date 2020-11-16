@@ -259,8 +259,16 @@ let updateChart = () => {
   // **************************** MOUSE EVENTS *************************** //
   // ********************************************************************* //
   nodeJoin
-    .on("mouseover", onMouseOver)
-    .on("mouseout", onMouseOut)
+    .on("mouseover", function (event, d) {
+      if (currFocus.children.length > 15 && currFocus.depth === 3)
+        d3.select(this).select("text").style("display", "inline");
+      onMouseOver(event, d);
+    })
+    .on("mouseout", function (event, d) {
+      if (currFocus.children.length > 15 && currFocus.depth === 3)
+        d3.select(this).select("text").style("display", "none");
+      onMouseOut(event, d);
+    })
     .on("click", (event, d, i) => {
       if (currFocus === d) {
         zoom(d.parent), event.stopPropagation();
@@ -273,9 +281,6 @@ let updateChart = () => {
 };
 
 let fadeSelectedNodesContentIn = (selectedNodes) => {
-  console.log("selected nodes", selectedNodes);
-  if (selectedNodes.nodes().length)
-    console.log("length", selectedNodes.nodes().length);
   let duration = currFocus ? 0 : 750;
   selectedNodes
     .select("circle.nodeCircle")
@@ -295,7 +300,12 @@ let fadeSelectedNodesContentIn = (selectedNodes) => {
     .transition()
     .duration(duration)
     .attr("fill-opacity", 1)
-    .style("display", selectedNodes.nodes().length > 15 ? "none" : "inline");
+    .style(
+      "display",
+      currFocus.depth === 3 && selectedNodes.nodes().length > 15
+        ? "none"
+        : "inline"
+    );
 };
 
 let updateText = () => {
@@ -369,15 +379,7 @@ let onMouseOut = (event, d) => {
     .transition()
     .duration(250)
     .attr("fill-opacity", 1);
-  siblings
-    .filter(function (d) {
-      return this.style.display === "inline";
-    })
-    .select("text")
-    .style("display", "inline")
-    .transition()
-    .duration(250)
-    .attr("fill-opacity", 1);
+  siblings.select("text").transition().duration(250).attr("fill-opacity", 1);
   // return the dimmed games in the sidebar to normal
   if (currFocus.depth === 3) {
     sidebar
