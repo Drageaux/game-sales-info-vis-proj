@@ -162,7 +162,7 @@ let shuffleArray = () => {
 let cPack;
 let updateData = () => {
   let filteredGames = games.filter(
-    (e) => e[SALES] > 0 && +e[YEAR] >= currYears[0] && +e[YEAR] <= currYears[1]
+    (e) => +e[YEAR] >= currYears[0] && +e[YEAR] <= currYears[1]
   );
   let groupedData = d3.group(
     filteredGames,
@@ -539,6 +539,12 @@ let zoom = (d) => {
       (d) =>
         `${d.value >= 0.01 ? "$" + d3.format(",.2f")(d.value) : "< $0.01"}m`
     );
+  // if (currFocus.depth === 3) {
+  //   gameItems
+  //     .append("div")
+  //     .style("font-weight", 400)
+  //     .text((d) => d3.format(".d")(d.data[YEAR]));
+  // }
 
   // hide and show components
   if (currFocus.depth != 0) {
