@@ -9,3 +9,4 @@ let NO_PLAYERS = "Number Players";
 let ESRB = "Rating";
 let METASCORE = "Metascore";
 let USERSCORE = "User Score";
+let RELEASED = "Release Date";

@@ -521,7 +521,7 @@ let zoom = (d) => {
     .append("li")
     // .style("list-style", "none")
     .style("font-size", "0.75rem")
-    .style("margin-top", "0.75rem")
+    .style("margin-top", "1rem")
     .style("cursor", (d) => (d.data[0] ? "pointer" : "initial"))
     .text((d) => d.data[0] || d.data[GAME])
     .on("mouseover", onMouseOver)
@@ -536,26 +536,69 @@ let zoom = (d) => {
       }
     });
 
-  listItems
-    .filter((d) => currFocus.depth < 3)
-    .append("span")
-    .style("font-weight", 400)
-    .style("opacity", 0.75)
-    .text((d) => ` (${d3.format(",.0d")(d.leaves().length)})`);
-
+  if (currFocus.depth < 3) {
+    listItems
+      .append("span")
+      .style("font-weight", 400)
+      .style("opacity", 0.75)
+      .text((d) => ` (${d3.format(",.0d")(d.leaves().length)})`);
+  }
   listItems
     .append("div")
     .style("font-weight", 400)
+    .text((d) => `${currFocus.depth < 3 ? "" : "Sales: "}`)
+    .append("span")
     .text(
       (d) =>
         `${d.value >= 0.01 ? "$" + d3.format(",.2f")(d.value) : "< $0.01"}m`
     );
-  // if (currFocus.depth === 3) {
-  //   gameItems
-  //     .append("div")
-  //     .style("font-weight", 400)
-  //     .text((d) => d3.format(".d")(d.data[YEAR]));
-  // }
+
+  if (currFocus.depth === 3) {
+    // TODO: Check if sales are aggregated across multiple years
+    // listItems
+    //   .filter((d) => +d.data[YEAR] && +d.data[YEAR] != "-1")
+    //   .append("div")
+    //   .style("font-weight", 400)
+    //   .text("Year: ")
+    //   .append("span")
+    //   .text((d) => d.data[YEAR]);
+    listItems
+      .filter((d) => d.data[RELEASED] && d.data[RELEASED] != "-1")
+      .append("div")
+      .style("font-weight", 400)
+      .text("Release Date: ")
+      .append("span")
+      .text((d) => d.data[RELEASED]);
+    listItems
+      .filter((d) => d.data[DEVELOPER])
+      .append("div")
+      .style("font-weight", 400)
+      .text("Developer: ")
+      .append("span")
+      .text((d) => d.data[DEVELOPER]);
+
+    listItems
+      .filter((d) => d.data[ESRB])
+      .append("div")
+      .style("font-weight", 400)
+      .text("ESRB Rating: ")
+      .append("span")
+      .text((d) => d.data[ESRB]);
+    listItems
+      .filter((d) => d.data[METASCORE])
+      .append("div")
+      .style("font-weight", 400)
+      .text("Metascore: ")
+      .append("span")
+      .text((d) => d.data[METASCORE]);
+    listItems
+      .filter((d) => d.data[USERSCORE])
+      .append("div")
+      .style("font-weight", 400)
+      .text("User Score: ")
+      .append("span")
+      .text((d) => d.data[USERSCORE]);
+  }
 
   // hide and show components
   if (currFocus.depth != 0) {
