@@ -344,18 +344,6 @@ let updateText = () => {
         `${d.value >= 0.01 ? "$" + d3.format(",.2f")(d.value) : "< $0.01"}m`
     );
 
-  label
-    .filter((d) => d.data[0])
-    .append("tspan")
-    .attr("font-weight", 400)
-    .attr("dy", "1.15em")
-    .attr("x", 22)
-    .text((d) => {
-      console.log(d.data[0] + "leaves", d.leaves());
-      // console.log("desc", d.descendants());
-      return d.leaves().length + " games";
-    });
-
   label.on("mousedown", () => false);
 };
 
@@ -501,7 +489,7 @@ let zoom = (d) => {
   // change focus to new node
   currFocus = d;
 
-  sidebar.style("border-color", circleColors[currFocus.depth + 1]);
+  sidebar.style("border-color", circleColors[d.depth + 1]);
   // display game details at game level
   sidebar.select("#orderer").style("display", "none");
   const details = sidebar
@@ -510,11 +498,8 @@ let zoom = (d) => {
     .style("color", circleColors[currFocus.depth + 1]);
   details.selectAll("*").remove();
 
-  let exampleGame = currFocus.children[0].data;
   let layers = currFocus.ancestors().reverse().slice(1);
-  console.log(layers.map((d) => d.data[0]));
   let description = layers.reduce((prev, curr, i) => {
-    console.log(prev, curr);
     return i === 0 ? curr.data[0] : prev + ", " + curr.data[0];
   }, "");
   console.log(description);
@@ -535,7 +520,7 @@ let zoom = (d) => {
     .style("opacity", 0.75)
     .text("(Ranked by game sales)");
   // list out game items
-  const gameItems = list
+  const listItems = list
     .selectAll("li")
     .data(currFocus.children.sort((a, b) => b.value - a.value))
     .enter()
@@ -543,11 +528,28 @@ let zoom = (d) => {
     .style("list-style", "none")
     .style("font-size", "0.75rem")
     .style("margin-top", "0.5rem")
+    .style("cursor", (d) => (d.data[0] ? "pointer" : "initial"))
     .text((d) => d.data[0] || d.data[GAME])
     .on("mouseover", onMouseOver)
-    .on("mouseout", onMouseOut);
+    .on("mouseout", onMouseOut)
+    .on("click", (event, d, i) => {
+      if (currFocus === d) {
+        zoom(d.parent), event.stopPropagation();
+      } else if (d.depth > 3) {
+        event.stopPropagation();
+      } else {
+        zoom(d), event.stopPropagation();
+      }
+    });
 
-  gameItems
+  listItems
+    .filter((d) => currFocus.depth < 3)
+    .append("span")
+    .style("font-weight", 400)
+    .style("opacity", 0.75)
+    .text((d) => ` (${d3.format(",.0d")(d.leaves().length)})`);
+
+  listItems
     .append("div")
     .style("font-weight", 400)
     .text(
