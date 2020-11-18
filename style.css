@@ -45,6 +45,7 @@ body {
 
 #sidebar ul {
   padding-inline-start: 1.5rem;
+  padding-inline-end: 1.5rem;
 }
 
 #sidebar::-webkit-scrollbar {
