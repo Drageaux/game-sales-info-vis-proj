@@ -114,17 +114,11 @@ window.onresize = () => {
     .attr(
       "width",
       d3.select("#slider").select("div").node().getBoundingClientRect().width *
-        0.9
+        1.5
     )
     .attr("height", 100)
     .select("g")
-    .attr(
-      "transform",
-      `translate(${
-        d3.select("#slider").select("div").node().getBoundingClientRect()
-          .width * 0.1
-      },30)`
-    );
+    .attr("transform", `translate(0,30)`);
 };
 
 let layers = [REGION, GENRE, PLATFORM];
@@ -527,7 +521,7 @@ let zoom = (d) => {
     .append("li")
     .style("list-style", "none")
     .style("font-size", "0.75rem")
-    .style("margin-top", "0.5rem")
+    .style("margin-top", "0.75rem")
     .style("cursor", (d) => (d.data[0] ? "pointer" : "initial"))
     .text((d) => d.data[0] || d.data[GAME])
     .on("mouseover", onMouseOver)
@@ -565,7 +559,7 @@ let zoom = (d) => {
 
   // hide and show components
   if (currFocus.depth != 0) {
-    svg.select("#slider").style("display", "none");
+    d3.select("#slider").style("display", "none");
   } else if (currFocus.depth === 0) {
     // slider appears
     d3.select("#slider").style("display", "inline");
