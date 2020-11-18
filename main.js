@@ -523,7 +523,7 @@ let zoom = (d) => {
     .style("font-size", "0.75rem")
     .style("margin-top", "0.75rem")
     .style("cursor", (d) => (d.data[0] ? "pointer" : "initial"))
-    .text((d => d.data[0] || d.data[GAME])
+    .text((d) => d.data[0] || d.data[GAME])
     .on("mouseover", onMouseOver)
     .on("mouseout", onMouseOut)
     .on("click", (event, d, i) => {
