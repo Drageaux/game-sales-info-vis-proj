@@ -500,7 +500,7 @@ let zoom = (d) => {
 
   // create list and add title
   let list = details
-    .append("ul")
+    .append("ol")
     .text(
       description
         ? `Full list of all games for ${description}`
@@ -519,11 +519,11 @@ let zoom = (d) => {
     .data(currFocus.children.sort((a, b) => b.value - a.value))
     .enter()
     .append("li")
-    .style("list-style", "none")
+    // .style("list-style", "none")
     .style("font-size", "0.75rem")
     .style("margin-top", "0.75rem")
     .style("cursor", (d) => (d.data[0] ? "pointer" : "initial"))
-    .text((d) => d.data[0] || d.data[GAME])
+    .text((d => d.data[0] || d.data[GAME])
     .on("mouseover", onMouseOver)
     .on("mouseout", onMouseOut)
     .on("click", (event, d, i) => {
