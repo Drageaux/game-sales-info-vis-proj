@@ -162,7 +162,7 @@ let shuffleArray = () => {
 let cPack;
 let updateData = () => {
   let filteredGames = games.filter(
-    (e) => +e[YEAR] >= currYears[0] && +e[YEAR] <= currYears[1]
+    (e) => +e[SALES] > 0 && +e[YEAR] >= currYears[0] && +e[YEAR] <= currYears[1]
   );
   let groupedData = d3.group(
     filteredGames,
@@ -339,7 +339,22 @@ let updateText = () => {
     .attr("font-weight", 400)
     .attr("dy", "1.15em")
     .attr("x", 22)
-    .text((d) => `$${d3.format(",.2f")(d.value)}m`);
+    .text(
+      (d) =>
+        `${d.value >= 0.01 ? "$" + d3.format(",.2f")(d.value) : "< $0.01"}m`
+    );
+
+  label
+    .filter((d) => d.data[0])
+    .append("tspan")
+    .attr("font-weight", 400)
+    .attr("dy", "1.15em")
+    .attr("x", 22)
+    .text((d) => {
+      console.log(d.data[0] + "leaves", d.leaves());
+      // console.log("desc", d.descendants());
+      return d.leaves().length + " games";
+    });
 
   label.on("mousedown", () => false);
 };
